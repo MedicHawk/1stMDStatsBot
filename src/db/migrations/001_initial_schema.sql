@@ -1,0 +1,4 @@
+-- Initial schema is maintained in ../schema.sql for local bootstrap.
+-- This placeholder keeps the migrations directory explicit until a migration runner is added.
+-- Load with:
+--   mysql -u <user> -p < src/db/schema.sql

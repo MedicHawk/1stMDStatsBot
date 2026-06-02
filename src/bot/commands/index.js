@@ -1,0 +1,21 @@
+module.exports = [
+  require('./link'),
+  require('./unlink'),
+  require('./profile'),
+  require('./stats'),
+  require('./leaderboard'),
+  require('./tophours'),
+  require('./topweapons'),
+  require('./topvehicles'),
+  require('./topdistance'),
+  require('./serverstatus'),
+  require('./mods'),
+  require('./season'),
+  require('./admin/root'),
+  require('./admin/server'),
+  require('./admin/category'),
+  require('./admin/adminUnlink'),
+  require('./admin/statsAdjust'),
+  require('./admin/statusChannel'),
+  require('./admin/leaderboardChannel')
+];

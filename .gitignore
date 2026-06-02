@@ -1,0 +1,20 @@
+# Runtime secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Logs and process output
+*.log
+
+# Local tunnel/debug binaries
+cloudflared.exe
+GitForWindowsInstaller.exe
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

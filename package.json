@@ -1,0 +1,46 @@
+{
+  "name": "1stmd-stats-bot",
+  "version": "0.1.0",
+  "description": "Multi-server Arma Reforger statistics API and Discord bot.",
+  "main": "src/bot/index.js",
+  "scripts": {
+    "start": "node src/bot/index.js",
+    "init-db": "node src/db/initDatabase.js",
+    "api": "node src/api/server.js",
+    "bot": "node src/bot/index.js",
+    "register-commands": "node src/bot/registerCommands.js",
+    "dev:api": "nodemon src/api/server.js",
+    "dev:bot": "nodemon src/bot/index.js",
+    "refresh-leaderboards": "node src/services/refreshLeaderboards.js",
+    "poll-battlemetrics": "node src/services/pollBattlemetrics.js",
+    "provision-server": "node src/db/provisionServer.js",
+    "smoke-test": "node src/api/smokeTestClient.js",
+    "stats-summary": "node src/db/printStatsSummary.js",
+    "check": "node --check src/api/server.js && node --check src/bot/index.js"
+  },
+  "keywords": [
+    "arma-reforger",
+    "discord",
+    "stats",
+    "battlemetrics"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/rest": "^2.4.3",
+    "bcryptjs": "^2.4.3",
+    "discord-api-types": "^0.37.115",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "mysql2": "^3.11.5",
+    "node-fetch": "^2.7.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^13.0.0",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "api": {
+    "port": 3000,
+    "publicUrl": "http://localhost:3000"
+  },
+  "leaderboards": {
+    "refreshMinutes": 10,
+    "defaultLimit": 10
+  },
+  "linking": {
+    "codeMinutes": 15
+  },
+  "battlemetrics": {
+    "enabled": true,
+    "timeoutMs": 8000
+  }
+}
