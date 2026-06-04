@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
 const { minutesFromNow, toMysqlDateTime } = require('../utils/time');
+const logger = require('../utils/logger');
 
 function makeCode() {
   return uuidv4().replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -26,6 +27,7 @@ async function createLinkCode(discordUserId) {
 }
 
 async function verifyInGameCode({ code, player_reforger_id, player_name }) {
+  const normalizedCode = String(code || '').trim().toUpperCase();
   const [rows] = await pool.execute(
     `SELECT * FROM link_codes
      WHERE used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
@@ -33,9 +35,15 @@ async function verifyInGameCode({ code, player_reforger_id, player_name }) {
      LIMIT 25`
   );
 
+  logger.info({
+    candidate_link_codes: rows.length,
+    player_reforger_id,
+    player_name
+  }, 'Checking active link codes');
+
   let matched = null;
   for (const row of rows) {
-    if (await bcrypt.compare(code, row.code_hash)) {
+    if (await bcrypt.compare(normalizedCode, row.code_hash)) {
       matched = row;
       break;
     }
