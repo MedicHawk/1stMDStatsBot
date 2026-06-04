@@ -7,12 +7,39 @@ This addon provides the game-side telemetry skeleton for the Node/Express backen
 1. Open the scenario in Arma Reforger Workbench.
 2. Select the game mode entity.
 3. Add `MDST_StatsGameModeComponent`.
-4. Configure:
+4. Configure optional defaults in Workbench. These values seed the runtime JSON file on first run:
    - API Base URL: `http://127.0.0.1:3000/` for local testing
    - Server ID: must match the backend `/server add` value
    - API Key: raw per-server key
    - Movement sample interval: 5-10 seconds is recommended
 5. Save the scenario.
+
+## Runtime Server Config
+
+On first server start, the mod creates:
+
+```text
+$profile:MDST_StatsBot_Config.json
+```
+
+Edit that file on the game server, set `api_base_url`, `server_id`, and `api_key`, then restart the server. Once the file exists, these JSON values override the Workbench component attributes.
+
+Example:
+
+```json
+{
+  "enabled": true,
+  "api_base_url": "http://207.49.100.200/",
+  "server_id": "hosted-main",
+  "api_key": "replace_with_server_api_key",
+  "movement_sample_seconds": 10,
+  "heartbeat_seconds": 30,
+  "queue_flush_seconds": 15,
+  "telemetry_log_seconds": 60,
+  "scenario_name": "unknown",
+  "max_player_slots": 64
+}
+```
 
 ## What Works Now
 

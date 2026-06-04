@@ -31,6 +31,9 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	[Attribute(defvalue: "15", UIWidgets.Slider, desc: "Retry queued API posts every N seconds.", params: "5 60 5", category: "1stMD Stats")]
 	protected float m_fQueueFlushSeconds;
 
+	[Attribute(defvalue: "60", UIWidgets.Slider, desc: "Log REST telemetry every N seconds. Set 0 to disable.", params: "0 300 15", category: "1stMD Stats")]
+	protected float m_fTelemetryLogSeconds;
+
 	[Attribute(defvalue: "unknown", UIWidgets.EditBox, desc: "Scenario/map name sent in heartbeat and match payloads.", category: "1stMD Stats")]
 	protected string m_sScenarioName;
 
@@ -65,9 +68,11 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	//------------------------------------------------------------------------------------------------
 	protected void InitializeStats()
 	{
+		LoadRuntimeConfig();
+
 		if (!m_bStatsEnabled)
 		{
-			Print("[1stMD Stats] Disabled by component setting.", LogLevel.NORMAL);
+			Print("[1stMD Stats] Disabled by runtime config or component setting.", LogLevel.NORMAL);
 			return;
 		}
 
@@ -88,8 +93,46 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 		GetGame().GetCallqueue().CallLater(FlushQueuedRequests, Math.Round(m_fQueueFlushSeconds * 1000), true);
 		GetGame().GetCallqueue().CallLater(SendSessionStartsForConnectedPlayers, 5000, false);
 
+		if (m_fTelemetryLogSeconds > 0)
+			GetGame().GetCallqueue().CallLater(LogTelemetryStatus, Math.Round(m_fTelemetryLogSeconds * 1000), true);
+
 		SendMatchStart();
 		Print(string.Format("[1stMD Stats] Initialized server_id=%1 api=%2", m_sServerId, m_sApiBaseUrl), LogLevel.NORMAL);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void LoadRuntimeConfig()
+	{
+		MDST_StatsServerConfig config = new MDST_StatsServerConfig();
+		config.SetDefaults(
+			m_bStatsEnabled,
+			m_sApiBaseUrl,
+			m_sServerId,
+			m_sApiKey,
+			m_fMovementSampleSeconds,
+			m_fHeartbeatSeconds,
+			m_fQueueFlushSeconds,
+			m_fTelemetryLogSeconds,
+			m_sScenarioName,
+			m_iMaxPlayerSlots
+		);
+
+		if (!config.LoadOrCreate())
+			return;
+
+		m_bStatsEnabled = config.enabled;
+		m_sApiBaseUrl = config.api_base_url;
+		m_sServerId = config.server_id;
+		m_sApiKey = config.api_key;
+		m_fMovementSampleSeconds = config.movement_sample_seconds;
+		m_fHeartbeatSeconds = config.heartbeat_seconds;
+		m_fQueueFlushSeconds = config.queue_flush_seconds;
+		m_fTelemetryLogSeconds = config.telemetry_log_seconds;
+		m_sScenarioName = config.scenario_name;
+		m_iMaxPlayerSlots = config.max_player_slots;
+
+		if (!config.HasUsableServerConfig())
+			Print(string.Format("[1stMD Stats] Runtime config at %1 is missing usable server values. Edit it and restart the server.", MDST_StatsServerConfig.CONFIG_PATH), LogLevel.ERROR);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -123,6 +166,23 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	{
 		if (m_RestClient)
 			m_RestClient.FlushQueue();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void LogTelemetryStatus()
+	{
+		if (!m_RestClient)
+			return;
+
+		Print(string.Format(
+			"[1stMD Stats] REST telemetry dispatched=%1 queued_total=%2 queue_depth=%3 dropped=%4 oversized=%5 dispatch_failed=%6",
+			m_RestClient.GetDispatchedCount(),
+			m_RestClient.GetQueuedCount(),
+			m_RestClient.GetQueuedRequestCount(),
+			m_RestClient.GetDroppedCount(),
+			m_RestClient.GetOversizedDroppedCount(),
+			m_RestClient.GetDispatchFailedCount()
+		), LogLevel.NORMAL);
 	}
 
 	//------------------------------------------------------------------------------------------------
