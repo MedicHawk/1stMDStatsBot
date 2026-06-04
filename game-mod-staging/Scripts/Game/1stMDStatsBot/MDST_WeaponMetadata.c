@@ -44,7 +44,8 @@ class MDST_WeaponMetadata
 	//------------------------------------------------------------------------------------------------
 	static string GetVehicleNameForPlayer(int playerId)
 	{
-		return GetVehicleIdForPlayer(playerId);
+		IEntity vehicle = GetVehicleForPlayer(playerId);
+		return GetVehicleDisplayName(vehicle);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -154,6 +155,35 @@ class MDST_WeaponMetadata
 			return weaponEntity.ToString();
 
 		return "";
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static string GetVehicleDisplayName(IEntity vehicle)
+	{
+		if (!vehicle)
+			return "";
+
+		SCR_EditableVehicleComponent editableVehicle = SCR_EditableVehicleComponent.Cast(vehicle.FindComponent(SCR_EditableVehicleComponent));
+		if (editableVehicle)
+		{
+			SCR_UIInfo vehicleInfo = editableVehicle.GetInfo(vehicle);
+			if (vehicleInfo)
+			{
+				string infoName = vehicleInfo.GetName();
+				if (!infoName.IsEmpty())
+					return infoName;
+			}
+
+			string displayName = editableVehicle.GetDisplayName();
+			if (!displayName.IsEmpty())
+				return displayName;
+		}
+
+		string prefabName = GetEntityPrefabName(vehicle);
+		if (!prefabName.IsEmpty())
+			return prefabName;
+
+		return vehicle.ToString();
 	}
 
 	//------------------------------------------------------------------------------------------------

@@ -62,7 +62,7 @@ For prefab-level fallback tracking, attach `MDST_AIKillReporterComponent` to AI 
 
 ## Weapon Tracking
 
-Combat events persist weapon stats when `weapon_id` is present. The game-side hooks now try the killer player's currently held weapon first through `CharacterWeaponManagerComponent.GetCurrentWeapon().GetUIInfo()`, then the occupied vehicle from `CompartmentAccessComponent.GetVehicleIn()`, then metadata from `Instigator.GetInstigatorEntity()`. Non-player source entities use their prefab name as `weapon_id` and `weapon_name`.
+Combat events persist weapon stats when `weapon_id` is present. The game-side hooks now try the killer player's currently held weapon first through `CharacterWeaponManagerComponent.GetCurrentWeapon().GetUIInfo()`, then the occupied vehicle from `CompartmentAccessComponent.GetVehicleIn()`, then metadata from `Instigator.GetInstigatorEntity()`. Vehicle IDs stay prefab-based, while vehicle display names prefer `SCR_EditableVehicleComponent.GetInfo()` / `SCR_EditableVehicleUIInfo` data.
 
 When the killer is in a vehicle, AI kills and player kills also emit a vehicle kill event so mounted weapons and vehicle seats can populate `vehicle_stats`.
 

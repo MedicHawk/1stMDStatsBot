@@ -75,7 +75,7 @@ The component checks the AI entity damage state and reports one `ai_kill` when i
 
 ## Weapon Tracking
 
-Automatic AI-kill and player-kill hooks try the killer player's currently held weapon first through `WeaponUIInfo`/`UIInfo`, then the occupied vehicle, then `Instigator.GetInstigatorEntity()` source metadata. If a non-player source entity is used, its prefab name is sent as `weapon_id` and `weapon_name`.
+Automatic AI-kill and player-kill hooks try the killer player's currently held weapon first through `WeaponUIInfo`/`UIInfo`, then the occupied vehicle, then `Instigator.GetInstigatorEntity()` source metadata. Vehicle IDs stay prefab-based, while vehicle names prefer `SCR_EditableVehicleComponent` UI info.
 
 If the killer is in a vehicle, the mod also sends a vehicle kill event so mounted machine gun positions and vehicle kills can populate `vehicle_stats`.
 
