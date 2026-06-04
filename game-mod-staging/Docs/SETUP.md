@@ -48,6 +48,7 @@ Example:
 - Periodic movement sampling with basic dead-player and speed-spike rejection
 - Bounded in-memory retry queue for posts attempted before the API is ready or when dispatch fails
 - Player death and player-vs-player kill combat events
+- AI kill tracking through the same character life-state signal used by 1stMD Scoreboard
 - AI kill attribution helpers for player ID, killer entity, instigator, and nearest-player fallback
 - Chat account linking with `!link CODE`
 - Helper methods for link verification, combat, medical, vehicle, objective, match, and mod-list events
@@ -65,7 +66,9 @@ The Reforger API surface changes across builds, so identity and event hooks are 
 
 ## AI Prefab Setup
 
-To automatically count AI deaths, add `MDST_AIKillReporterComponent` to the AI character prefab or to the spawned AI entity template used by your scenario.
+The primary AI kill tracker hooks `SCR_CharacterControllerComponent.OnLifeStateChanged`, ignores player-controlled victims, reads the AI character damage manager instigator, and reports the killer player's `ai_kill`.
+
+For fallback diagnostics, add `MDST_AIKillReporterComponent` to the AI character prefab or to the spawned AI entity template used by your scenario.
 
 The component checks the AI entity damage state and reports one `ai_kill` when it becomes destroyed. If no precise attacker has been recorded, it credits the nearest player within the configured fallback radius.
 

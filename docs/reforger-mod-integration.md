@@ -47,6 +47,8 @@ TODO: Add the game-side script that computes trusted movement deltas and posts t
 
 ## AI Kill Attribution
 
+The primary automatic tracker mirrors `1stMD Scoreboard`: it hooks `SCR_CharacterControllerComponent.OnLifeStateChanged`, ignores player-controlled victims, reads `SCR_DamageManagerComponent.GetInstigator()`, and reports an `ai_kill` for the killer player when an AI transitions to `DEAD`.
+
 For AI deaths caused by players, prefer the most specific game-side signal available:
 
 - `MDST_RecordAIKilledByInstigator(aiEntity, killerEntity, killerInstigator, weaponId, weaponName)`
@@ -56,7 +58,7 @@ For AI deaths caused by players, prefer the most specific game-side signal avail
 
 The tracker suppresses duplicate credits for the same AI entity for a short window and computes kill distance when both AI and killer entities are available.
 
-For automatic prefab-level tracking, attach `MDST_AIKillReporterComponent` to AI character prefabs or spawned AI templates. It polls the AI damage state and reports once when the entity is destroyed. Without a precise attacker callback, it credits the nearest player inside the configured fallback radius.
+For prefab-level fallback tracking, attach `MDST_AIKillReporterComponent` to AI character prefabs or spawned AI templates. It polls the AI damage state and reports once when the entity is destroyed. Without a precise attacker callback, it credits the nearest player inside the configured fallback radius.
 
 ## Status And Mods
 
