@@ -31,6 +31,7 @@ NODE_ENV=production
 LOG_LEVEL=info
 API_PORT=3000
 PUBLIC_API_URL=https://stats.your-domain.example
+TRUST_PROXY=1
 
 DISCORD_TOKEN=replace_with_discord_bot_token
 DISCORD_CLIENT_ID=replace_with_discord_application_client_id

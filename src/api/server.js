@@ -12,6 +12,8 @@ const pool = require('../db/pool');
 
 const app = express();
 
+app.set('trust proxy', Number(process.env.TRUST_PROXY || 1));
+
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({
