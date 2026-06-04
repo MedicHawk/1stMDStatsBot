@@ -8,6 +8,7 @@ modded class SCR_ChatComponent
 	override void OnNewMessage(string msg, int channelId, int senderId)
 	{
 		super.OnNewMessage(msg, channelId, senderId);
+		Print(string.Format("[1stMD Stats] Chat observed sender_id=%1 channel=%2 length=%3", senderId, channelId, msg.Length()), LogLevel.NORMAL);
 		MDST_TryHandleLinkCommand(msg, senderId);
 	}
 
@@ -16,6 +17,8 @@ modded class SCR_ChatComponent
 		string code = MDST_ExtractLinkCode(msg);
 		if (code.IsEmpty())
 			return;
+
+		Print(string.Format("[1stMD Stats] Link command detected sender_id=%1 code_len=%2", senderId, code.Length()), LogLevel.NORMAL);
 
 		if (!MDST_IsValidLinkCode(code))
 		{
@@ -30,8 +33,8 @@ modded class SCR_ChatComponent
 			return;
 		}
 
+		Print(string.Format("[1stMD Stats] Link command accepted; submitting sender_id=%1", senderId), LogLevel.NORMAL);
 		stats.SendLinkCode(senderId, code);
-		Print(string.Format("[1stMD Stats] Link command submitted for player_id=%1", senderId), LogLevel.NORMAL);
 	}
 
 	protected string MDST_ExtractLinkCode(string msg)
