@@ -23,6 +23,25 @@ Required runtime values:
 
 The same file also controls telemetry intervals, scenario name, max player slots, and whether stats are enabled.
 
+## Runtime Mods File
+
+The game-side mod also creates `$profile:MDST_StatsBot_Mods.json` on first run. Edit that file with the mods you want to publish, then restart the server. The mod sends the list to `/api/status/mods` shortly after the normal stats startup completes.
+
+Example:
+
+```json
+{
+  "mods": [
+    {
+      "mod_id": "1stMDStatsBot",
+      "name": "1stMD Stats Bot",
+      "version": "",
+      "required": true
+    }
+  ]
+}
+```
+
 ## Player Linking Flow
 
 1. Player runs `/link` in Discord.
@@ -74,6 +93,6 @@ For exact shot and hit counts, call:
 
 ## Status And Mods
 
-Use `/api/status/heartbeat` for player counts, map/scenario, and uptime. Use `/api/status/mods` whenever the loaded mod list changes or on server start.
+Use `/api/status/heartbeat` for player counts, map/scenario, and uptime. The game-side mod publishes `/api/status/mods` from `$profile:MDST_StatsBot_Mods.json` on server start.
 
 BattleMetrics is useful for public visibility, but gameplay stats should come from the mod/API path.

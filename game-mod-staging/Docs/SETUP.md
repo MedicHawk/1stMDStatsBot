@@ -41,9 +41,41 @@ Example:
 }
 ```
 
+## Runtime Mods Config
+
+On first server start, the mod also creates:
+
+```text
+$profile:MDST_StatsBot_Mods.json
+```
+
+Edit that file on the game server to list the mods you want Discord/API users to see, then restart the server. The mod sends this list to `/api/status/mods` once during startup.
+
+Example:
+
+```json
+{
+  "mods": [
+    {
+      "mod_id": "1stMDStatsBot",
+      "name": "1stMD Stats Bot",
+      "version": "",
+      "required": true
+    },
+    {
+      "mod_id": "1stMDScoreboard",
+      "name": "1stMD Scoreboard",
+      "version": "",
+      "required": true
+    }
+  ]
+}
+```
+
 ## What Works Now
 
 - API heartbeat posts to `/api/status/heartbeat`
+- Runtime mod-list publishing from `$profile:MDST_StatsBot_Mods.json`
 - Session starts for connected players at startup and on player connect
 - Periodic movement sampling with basic dead-player and speed-spike rejection
 - Bounded in-memory retry queue for posts attempted before the API is ready or when dispatch fails
