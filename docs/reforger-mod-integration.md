@@ -45,6 +45,17 @@ Before sending movement deltas:
 
 TODO: Add the game-side script that computes trusted movement deltas and posts them to `/api/ingest/movement`.
 
+## AI Kill Attribution
+
+For AI deaths caused by players, prefer the most specific game-side signal available:
+
+- `MDST_RecordAIKilledByInstigator(aiEntity, killerEntity, killerInstigator, weaponId, weaponName)`
+- `MDST_RecordAIKilledByEntity(aiEntity, killerEntity, weaponId, weaponName)`
+- `MDST_RecordAIKilledByPlayer(playerId, aiEntity, weaponId, weaponName)`
+- `MDST_RecordAIKillNear(position, radiusMeters, weaponId, weaponName)` as a nearest-player fallback
+
+The tracker suppresses duplicate credits for the same AI entity for a short window and computes kill distance when both AI and killer entities are available.
+
 ## Status And Mods
 
 Use `/api/status/heartbeat` for player counts, map/scenario, and uptime. Use `/api/status/mods` whenever the loaded mod list changes or on server start.

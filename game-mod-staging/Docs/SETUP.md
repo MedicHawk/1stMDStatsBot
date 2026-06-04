@@ -48,6 +48,7 @@ Example:
 - Periodic movement sampling with basic dead-player and speed-spike rejection
 - Bounded in-memory retry queue for posts attempted before the API is ready or when dispatch fails
 - Player death and player-vs-player kill combat events
+- AI kill attribution helpers for player ID, killer entity, instigator, and nearest-player fallback
 - Chat account linking with `!link CODE`
 - Helper methods for link verification, combat, medical, vehicle, objective, match, and mod-list events
 
@@ -58,8 +59,17 @@ The Reforger API surface changes across builds, so identity and event hooks are 
 - `MDST_PlayerIdentityService.GetStablePlayerId` currently uses `SCR_PlayerIdentityUtils.GetPlayerIdentityId`.
 - Players can run `!link CODE` in chat after generating a code with Discord `/link`.
 - Other addons can still call `MDST_StatsGameModeComponent.GetInstance().SendLinkCode(playerId, code)` directly.
-- From other server-side scripts, call `SCR_BaseGameMode.MDST_RecordAIKill`, `MDST_RecordRevive`, `MDST_RecordObjectiveCompleted`, or the component wrapper methods directly.
+- From other server-side scripts, call `SCR_BaseGameMode.MDST_RecordAIKill`, `MDST_RecordAIKilledByPlayer`, `MDST_RecordAIKilledByEntity`, `MDST_RecordAIKilledByInstigator`, `MDST_RecordRevive`, `MDST_RecordObjectiveCompleted`, or the component wrapper methods directly.
 - For your endless objective system, call `MDST_RecordObjectiveCompletedNear(objectivePosition, radiusMeters)` when an objective completes. Nearby players receive both mission participation and objective completion credit.
-- If exact AI-kill attribution is unavailable, call `MDST_RecordAIKillsNear(position, radiusMeters, count)` to distribute cleanup-based AI kill credit among nearby players.
+- If exact AI-kill attribution is unavailable, call `MDST_RecordAIKillNear(position, radiusMeters)` for one nearest-player AI kill, or `MDST_RecordAIKillsNear(position, radiusMeters, count)` to distribute cleanup-based AI kill credit among nearby players.
+
+AI kill examples:
+
+```c
+SCR_BaseGameMode gameMode = SCR_BaseGameMode.Cast(GetGame().GetGameMode());
+gameMode.MDST_RecordAIKilledByPlayer(playerId, aiEntity, weaponId, weaponName);
+gameMode.MDST_RecordAIKilledByEntity(aiEntity, killerEntity, weaponId, weaponName);
+gameMode.MDST_RecordAIKilledByInstigator(aiEntity, killerEntity, killerInstigator, weaponId, weaponName);
+```
 
 The backend accepts Reforger credentials as `server_id` and `api_key` query parameters; the REST client appends them automatically.
