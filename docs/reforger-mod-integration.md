@@ -2,10 +2,12 @@
 
 The mod should send gameplay events to the Express API, not to Discord directly.
 
-## Required Headers
+## Server Authentication
 
-- `x-server-id`
-- `x-api-key`
+Reforger REST posts include server credentials in the query string because custom request headers are not reliable in the Reforger REST API:
+
+- `server_id`
+- `api_key`
 
 Each server gets its own API key. Rotate keys if a server config leaks.
 
@@ -13,7 +15,7 @@ Each server gets its own API key. Rotate keys if a server config leaks.
 
 1. Player runs `/link` in Discord.
 2. Bot returns an ephemeral one-time code.
-3. Player enters the code in-game through a chat command or UI.
+3. Player enters `!link CODE` in-game chat. `/link CODE` is also supported if the slash form reaches the chat component.
 4. Mod sends the code and stable Reforger/platform player ID to `/api/link/verify`.
 5. API stores the Discord to Reforger account link.
 
