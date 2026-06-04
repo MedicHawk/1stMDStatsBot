@@ -234,7 +234,7 @@ async function startMatch(server, payload) {
       serverId: server.id,
       externalMatchId: payload.external_match_id || null,
       scenario: payload.scenario || null,
-      startedAt: payload.started_at
+      startedAt: payload.started_at || null
     }
   );
 }
