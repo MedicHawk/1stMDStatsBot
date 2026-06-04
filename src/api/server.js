@@ -15,7 +15,10 @@ const app = express();
 app.set('trust proxy', Number(process.env.TRUST_PROXY || 1));
 
 app.use(helmet());
-app.use(express.json({ limit: '1mb', type: '*/*' }));
+app.use(express.json({
+  limit: '1mb',
+  type: (req) => req.is('application/json') || req.originalUrl.startsWith('/api/')
+}));
 app.use(rateLimit({
   windowMs: 60 * 1000,
   max: 240,
