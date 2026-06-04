@@ -58,6 +58,14 @@ modded class SCR_BaseGameMode
 		{
 			Print(string.Format("[1stMD Stats] Player kill detected killer=%1 victim=%2 weapon=%3 source=%4", killerPlayerId, playerId, weaponName, sourceEntity), LogLevel.NORMAL);
 			stats.SendPlayerKill(killerPlayerId, weaponId, weaponName);
+
+			if (MDST_WeaponMetadata.IsPlayerInVehicle(killerPlayerId))
+			{
+				string vehicleId = MDST_WeaponMetadata.GetVehicleIdForPlayer(killerPlayerId);
+				string vehicleName = MDST_WeaponMetadata.GetVehicleNameForPlayer(killerPlayerId);
+				Print(string.Format("[1stMD Stats] Vehicle player kill detected player_id=%1 vehicle=%2", killerPlayerId, vehicleName), LogLevel.NORMAL);
+				stats.SendVehicleKill(killerPlayerId, vehicleId, vehicleName);
+			}
 		}
 
 		if (killerPlayerId > 0 && killerPlayerId == playerId)

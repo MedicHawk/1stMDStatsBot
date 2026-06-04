@@ -12,6 +12,10 @@ class MDST_WeaponMetadata
 		if (!weaponId.IsEmpty())
 			return weaponId;
 
+		weaponId = GetVehicleIdForPlayer(playerId);
+		if (!weaponId.IsEmpty())
+			return weaponId;
+
 		return GetWeaponIdFromSource(sourceEntity);
 	}
 
@@ -23,7 +27,30 @@ class MDST_WeaponMetadata
 		if (!weaponName.IsEmpty())
 			return weaponName;
 
+		weaponName = GetVehicleNameForPlayer(playerId);
+		if (!weaponName.IsEmpty())
+			return weaponName;
+
 		return GetWeaponNameFromSource(sourceEntity);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string GetVehicleIdForPlayer(int playerId)
+	{
+		IEntity vehicle = GetVehicleForPlayer(playerId);
+		return GetEntityPrefabName(vehicle);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string GetVehicleNameForPlayer(int playerId)
+	{
+		return GetVehicleIdForPlayer(playerId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool IsPlayerInVehicle(int playerId)
+	{
+		return GetVehicleForPlayer(playerId) != null;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -38,9 +65,9 @@ class MDST_WeaponMetadata
 			return GetWeaponIdForPlayer(playerId);
 		}
 
-		EntityPrefabData prefabData = sourceEntity.GetPrefabData();
-		if (prefabData)
-			return prefabData.GetPrefabName();
+		string prefabName = GetEntityPrefabName(sourceEntity);
+		if (!prefabName.IsEmpty())
+			return prefabName;
 
 		return sourceEntity.ToString();
 	}
@@ -82,18 +109,32 @@ class MDST_WeaponMetadata
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected static IEntity GetVehicleForPlayer(int playerId)
+	{
+		if (playerId <= 0)
+			return null;
+
+		PlayerManager playerManager = GetGame().GetPlayerManager();
+		if (!playerManager)
+			return null;
+
+		IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
+		if (!playerEntity)
+			return null;
+
+		return CompartmentAccessComponent.GetVehicleIn(playerEntity);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected static string GetWeaponIdFromWeapon(BaseWeaponComponent weapon)
 	{
 		if (!weapon)
 			return "";
 
 		IEntity weaponEntity = weapon.GetOwner();
-		if (weaponEntity)
-		{
-			EntityPrefabData prefabData = weaponEntity.GetPrefabData();
-			if (prefabData)
-				return prefabData.GetPrefabName();
-		}
+		string prefabName = GetEntityPrefabName(weaponEntity);
+		if (!prefabName.IsEmpty())
+			return prefabName;
 
 		return GetWeaponNameFromWeapon(weapon);
 	}
@@ -111,6 +152,19 @@ class MDST_WeaponMetadata
 		IEntity weaponEntity = weapon.GetOwner();
 		if (weaponEntity)
 			return weaponEntity.ToString();
+
+		return "";
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static string GetEntityPrefabName(IEntity entity)
+	{
+		if (!entity)
+			return "";
+
+		EntityPrefabData prefabData = entity.GetPrefabData();
+		if (prefabData)
+			return prefabData.GetPrefabName();
 
 		return "";
 	}

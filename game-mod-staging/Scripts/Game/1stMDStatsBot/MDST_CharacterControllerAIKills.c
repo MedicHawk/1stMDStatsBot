@@ -48,5 +48,13 @@ modded class SCR_CharacterControllerComponent
 
 		Print(string.Format("[1stMD Stats] AI life-state kill detected player_id=%1 weapon=%2 source=%3", killerPlayerId, weaponName, sourceEntity), LogLevel.NORMAL);
 		gameMode.MDST_RecordAIKilledByInstigator(victimEntity, sourceEntity, instigator, weaponId, weaponName);
+
+		if (MDST_WeaponMetadata.IsPlayerInVehicle(killerPlayerId))
+		{
+			string vehicleId = MDST_WeaponMetadata.GetVehicleIdForPlayer(killerPlayerId);
+			string vehicleName = MDST_WeaponMetadata.GetVehicleNameForPlayer(killerPlayerId);
+			Print(string.Format("[1stMD Stats] Vehicle AI kill detected player_id=%1 vehicle=%2", killerPlayerId, vehicleName), LogLevel.NORMAL);
+			gameMode.MDST_RecordVehicleKill(killerPlayerId, vehicleId, vehicleName);
+		}
 	}
 }
