@@ -51,8 +51,8 @@ modded class SCR_BaseGameMode
 		}
 
 		IEntity sourceEntity = killer.GetInstigatorEntity();
-		string weaponId = MDST_WeaponMetadata.GetWeaponIdFromSource(sourceEntity);
-		string weaponName = MDST_WeaponMetadata.GetWeaponNameFromSource(sourceEntity);
+		string weaponId = MDST_WeaponMetadata.GetWeaponIdForPlayer(killerPlayerId, sourceEntity);
+		string weaponName = MDST_WeaponMetadata.GetWeaponNameForPlayer(killerPlayerId, sourceEntity);
 
 		if (killerPlayerId > 0 && killerPlayerId != playerId)
 		{

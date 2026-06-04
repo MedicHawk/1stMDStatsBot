@@ -62,7 +62,7 @@ For prefab-level fallback tracking, attach `MDST_AIKillReporterComponent` to AI 
 
 ## Weapon Tracking
 
-Combat events persist weapon stats when `weapon_id` is present. The game-side hooks now attempt best-effort weapon/source metadata from `Instigator.GetInstigatorEntity()` for AI kills and player kills. Non-player source entities use their prefab name as `weapon_id` and `weapon_name`; player-controlled source entities are ignored to avoid storing player prefab names as weapons.
+Combat events persist weapon stats when `weapon_id` is present. The game-side hooks now try the killer player's currently held weapon first through `CharacterWeaponManagerComponent.GetCurrentWeapon().GetUIInfo()`, then fall back to metadata from `Instigator.GetInstigatorEntity()`. Non-player source entities use their prefab name as `weapon_id` and `weapon_name`.
 
 For exact shot and hit counts, call:
 
