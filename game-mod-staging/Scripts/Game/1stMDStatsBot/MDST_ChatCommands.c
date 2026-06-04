@@ -26,14 +26,22 @@ modded class SCR_ChatComponent
 			return;
 		}
 
-		MDST_StatsGameModeComponent stats = MDST_StatsGameModeComponent.GetInstance();
-		if (!stats || !stats.IsStatsReady())
+		SCR_PlayerControllerGroupComponent localGroupComponent = SCR_PlayerControllerGroupComponent.GetLocalPlayerControllerGroupComponent();
+		if (localGroupComponent)
 		{
-			Print("[1stMD Stats] Link command rejected because stats component is not ready.", LogLevel.WARNING);
+			Print("[1stMD Stats] Link command forwarding through local player controller RPC.", LogLevel.NORMAL);
+			localGroupComponent.MDST_RequestLinkCode(code);
 			return;
 		}
 
-		Print(string.Format("[1stMD Stats] Link command accepted; submitting sender_id=%1", senderId), LogLevel.NORMAL);
+		MDST_StatsGameModeComponent stats = MDST_StatsGameModeComponent.GetInstance();
+		if (!stats || !stats.IsStatsReady())
+		{
+			Print("[1stMD Stats] Link command rejected because no local RPC bridge or ready server stats component was found.", LogLevel.WARNING);
+			return;
+		}
+
+		Print(string.Format("[1stMD Stats] Link command submitting directly on server sender_id=%1", senderId), LogLevel.NORMAL);
 		stats.SendLinkCode(senderId, code);
 	}
 
