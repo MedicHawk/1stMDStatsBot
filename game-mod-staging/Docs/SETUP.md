@@ -49,6 +49,7 @@ Example:
 - Bounded in-memory retry queue for posts attempted before the API is ready or when dispatch fails
 - Player death and player-vs-player kill combat events
 - AI kill tracking through the same character life-state signal used by 1stMD Scoreboard
+- Best-effort weapon/source metadata for AI kills and player kills
 - AI kill attribution helpers for player ID, killer entity, instigator, and nearest-player fallback
 - Chat account linking with `!link CODE`
 - Helper methods for link verification, combat, medical, vehicle, objective, match, and mod-list events
@@ -71,6 +72,12 @@ The primary AI kill tracker hooks `SCR_CharacterControllerComponent.OnLifeStateC
 For fallback diagnostics, add `MDST_AIKillReporterComponent` to the AI character prefab or to the spawned AI entity template used by your scenario.
 
 The component checks the AI entity damage state and reports one `ai_kill` when it becomes destroyed. If no precise attacker has been recorded, it credits the nearest player within the configured fallback radius.
+
+## Weapon Tracking
+
+Automatic AI-kill and player-kill hooks use `Instigator.GetInstigatorEntity()` to capture best-effort weapon/source metadata. If that source is not player-controlled, its prefab name is sent as `weapon_id` and `weapon_name`.
+
+For exact weapon samples from other scripts, call `MDST_RecordWeaponShots`, `MDST_RecordWeaponHits`, or `MDST_RecordWeaponAccuracySample`.
 
 AI kill examples:
 

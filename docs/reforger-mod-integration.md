@@ -60,6 +60,16 @@ The tracker suppresses duplicate credits for the same AI entity for a short wind
 
 For prefab-level fallback tracking, attach `MDST_AIKillReporterComponent` to AI character prefabs or spawned AI templates. It polls the AI damage state and reports once when the entity is destroyed. Without a precise attacker callback, it credits the nearest player inside the configured fallback radius.
 
+## Weapon Tracking
+
+Combat events persist weapon stats when `weapon_id` is present. The game-side hooks now attempt best-effort weapon/source metadata from `Instigator.GetInstigatorEntity()` for AI kills and player kills. Non-player source entities use their prefab name as `weapon_id` and `weapon_name`; player-controlled source entities are ignored to avoid storing player prefab names as weapons.
+
+For exact shot and hit counts, call:
+
+- `MDST_RecordWeaponShots(playerId, weaponId, weaponName, shotsFired)`
+- `MDST_RecordWeaponHits(playerId, weaponId, weaponName, hits)`
+- `MDST_RecordWeaponAccuracySample(playerId, weaponId, weaponName, shotsFired, hits)`
+
 ## Status And Mods
 
 Use `/api/status/heartbeat` for player counts, map/scenario, and uptime. Use `/api/status/mods` whenever the loaded mod list changes or on server start.

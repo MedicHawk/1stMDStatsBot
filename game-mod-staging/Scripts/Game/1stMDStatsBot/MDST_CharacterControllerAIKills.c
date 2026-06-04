@@ -42,7 +42,11 @@ modded class SCR_CharacterControllerComponent
 		if (!gameMode)
 			return;
 
-		Print(string.Format("[1stMD Stats] AI life-state kill detected player_id=%1", killerPlayerId), LogLevel.NORMAL);
-		gameMode.MDST_RecordAIKilledByInstigator(victimEntity, null, instigator);
+		IEntity sourceEntity = instigator.GetInstigatorEntity();
+		string weaponId = MDST_WeaponMetadata.GetWeaponIdFromSource(sourceEntity);
+		string weaponName = MDST_WeaponMetadata.GetWeaponNameFromSource(sourceEntity);
+
+		Print(string.Format("[1stMD Stats] AI life-state kill detected player_id=%1 weapon=%2 source=%3", killerPlayerId, weaponName, sourceEntity), LogLevel.NORMAL);
+		gameMode.MDST_RecordAIKilledByInstigator(victimEntity, sourceEntity, instigator, weaponId, weaponName);
 	}
 }
