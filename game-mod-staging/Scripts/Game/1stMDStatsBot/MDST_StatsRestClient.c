@@ -83,14 +83,11 @@ class MDST_StatsRestClient
 			Print("[1stMD Stats] Failed to create REST context.", LogLevel.ERROR);
 			return;
 		}
+	}
 
-		string headers = string.Format(
-			"Content-Type: application/json\r\nx-server-id: %1\r\nx-api-key: %2",
-			m_sServerId,
-			m_sApiKey
-		);
-
-		m_RestContext.SetHeaders(headers);
+	protected string BuildAuthenticatedEndpoint(string endpoint)
+	{
+		return string.Format("%1?server_id=%2&api_key=%3", endpoint, m_sServerId, m_sApiKey);
 	}
 
 	void Post(string endpoint, string json)
@@ -107,10 +104,11 @@ class MDST_StatsRestClient
 			return;
 		}
 
+		string authenticatedEndpoint = BuildAuthenticatedEndpoint(endpoint);
 		MDST_StatsRestCallback callback = new MDST_StatsRestCallback(endpoint);
 		m_aCallbacks.Insert(callback);
 
-		int result = m_RestContext.POST(callback, endpoint, json);
+		int result = m_RestContext.POST(callback, authenticatedEndpoint, json);
 		if (result < 0)
 		{
 			Print(string.Format("[1stMD Stats] POST dispatch failed endpoint=%1 result=%2", endpoint, result), LogLevel.WARNING);
@@ -146,10 +144,11 @@ class MDST_StatsRestClient
 				continue;
 			}
 
+			string authenticatedEndpoint = BuildAuthenticatedEndpoint(request.m_sEndpoint);
 			MDST_StatsRestCallback callback = new MDST_StatsRestCallback(request.m_sEndpoint);
 			m_aCallbacks.Insert(callback);
 
-			int result = m_RestContext.POST(callback, request.m_sEndpoint, request.m_sJson);
+			int result = m_RestContext.POST(callback, authenticatedEndpoint, request.m_sJson);
 			if (result >= 0)
 			{
 				m_aQueue.Remove(i);

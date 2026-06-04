@@ -3,8 +3,8 @@ const pool = require('../../db/pool');
 
 async function serverAuth(req, res, next) {
   try {
-    const serverId = req.header('x-server-id') || req.body.server_id;
-    const apiKey = req.header('x-api-key');
+    const serverId = req.header('x-server-id') || req.body.server_id || req.query.server_id;
+    const apiKey = req.header('x-api-key') || req.body.api_key || req.query.api_key;
 
     if (!serverId || !apiKey) {
       return res.status(401).json({ error: 'Missing server credentials' });
