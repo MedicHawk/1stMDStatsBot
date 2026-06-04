@@ -126,7 +126,7 @@ modded class SCR_BaseGameMode
 	//------------------------------------------------------------------------------------------------
 	void MDST_RecordAIKilledByPlayer(int playerId, IEntity aiEntity, string weaponId = "", string weaponName = "")
 	{
-		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		MDST_StatsGameModeComponent stats = MDST_AIKillGetStatsComponent();
 		if (!stats)
 			return;
 
@@ -141,7 +141,7 @@ modded class SCR_BaseGameMode
 	//------------------------------------------------------------------------------------------------
 	void MDST_RecordAIKilledByEntity(IEntity aiEntity, IEntity killerEntity, string weaponId = "", string weaponName = "")
 	{
-		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		MDST_StatsGameModeComponent stats = MDST_AIKillGetStatsComponent();
 		if (!stats)
 			return;
 
@@ -152,7 +152,7 @@ modded class SCR_BaseGameMode
 	//------------------------------------------------------------------------------------------------
 	void MDST_RecordAIKilledByInstigator(IEntity aiEntity, IEntity killerEntity, notnull Instigator killer, string weaponId = "", string weaponName = "")
 	{
-		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		MDST_StatsGameModeComponent stats = MDST_AIKillGetStatsComponent();
 		if (!stats)
 			return;
 
@@ -166,8 +166,21 @@ modded class SCR_BaseGameMode
 	//------------------------------------------------------------------------------------------------
 	void MDST_RecordAIKillNear(vector position, float radiusMeters = 250, string weaponId = "", string weaponName = "")
 	{
-		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		MDST_StatsGameModeComponent stats = MDST_AIKillGetStatsComponent();
 		if (stats)
 			stats.SendAIKillNearPosition(position, radiusMeters, weaponId, weaponName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected MDST_StatsGameModeComponent MDST_AIKillGetStatsComponent()
+	{
+		if (!IsMaster())
+			return null;
+
+		MDST_StatsGameModeComponent stats = MDST_StatsGameModeComponent.GetInstance();
+		if (!stats || !stats.IsStatsReady())
+			return null;
+
+		return stats;
 	}
 }
