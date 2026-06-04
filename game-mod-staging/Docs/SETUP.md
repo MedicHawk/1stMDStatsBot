@@ -63,6 +63,12 @@ The Reforger API surface changes across builds, so identity and event hooks are 
 - For your endless objective system, call `MDST_RecordObjectiveCompletedNear(objectivePosition, radiusMeters)` when an objective completes. Nearby players receive both mission participation and objective completion credit.
 - If exact AI-kill attribution is unavailable, call `MDST_RecordAIKillNear(position, radiusMeters)` for one nearest-player AI kill, or `MDST_RecordAIKillsNear(position, radiusMeters, count)` to distribute cleanup-based AI kill credit among nearby players.
 
+## AI Prefab Setup
+
+To automatically count AI deaths, add `MDST_AIKillReporterComponent` to the AI character prefab or to the spawned AI entity template used by your scenario.
+
+The component checks the AI entity damage state and reports one `ai_kill` when it becomes destroyed. If no precise attacker has been recorded, it credits the nearest player within the configured fallback radius.
+
 AI kill examples:
 
 ```c

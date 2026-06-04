@@ -56,6 +56,8 @@ For AI deaths caused by players, prefer the most specific game-side signal avail
 
 The tracker suppresses duplicate credits for the same AI entity for a short window and computes kill distance when both AI and killer entities are available.
 
+For automatic prefab-level tracking, attach `MDST_AIKillReporterComponent` to AI character prefabs or spawned AI templates. It polls the AI damage state and reports once when the entity is destroyed. Without a precise attacker callback, it credits the nearest player inside the configured fallback radius.
+
 ## Status And Mods
 
 Use `/api/status/heartbeat` for player counts, map/scenario, and uptime. Use `/api/status/mods` whenever the loaded mod list changes or on server start.
