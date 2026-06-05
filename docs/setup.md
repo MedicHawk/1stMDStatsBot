@@ -29,7 +29,7 @@ Generate a complete paste-ready game server config, including a fresh API key:
 /server config server_id: hosted-main confirm: GENERATE
 ```
 
-This rotates the server API key and returns the full `$profile:MDST_StatsBot_Config.json` content in an ephemeral Discord response.
+This rotates the server API key and returns the full `$profile:MDST_StatsBot_Config.json` content in an ephemeral Discord response. If the server does not exist yet, it creates it first. Use optional `name`, `category`, and `battlemetrics_id` values to control the created server row.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 

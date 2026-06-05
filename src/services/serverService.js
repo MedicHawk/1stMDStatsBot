@@ -3,6 +3,10 @@ const crypto = require('crypto');
 const pool = require('../db/pool');
 const logger = require('../utils/logger');
 
+function generateApiKey() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
 async function listServers({ enabledOnly = false } = {}) {
   const [rows] = await pool.execute(
     `SELECT s.server_id, s.name, c.slug AS category, s.battlemetrics_id, s.enabled,
@@ -59,8 +63,14 @@ async function addServer(input) {
   }
 }
 
+async function addServerWithGeneratedApiKey(input) {
+  const apiKey = generateApiKey();
+  await addServer({ ...input, apiKey });
+  return apiKey;
+}
+
 async function rotateServerApiKey(serverId) {
-  const apiKey = crypto.randomBytes(24).toString('hex');
+  const apiKey = generateApiKey();
   const apiKeyHash = await bcrypt.hash(apiKey, 12);
   const [result] = await pool.execute(
     'UPDATE servers SET api_key_hash = :apiKeyHash WHERE server_id = :serverId',
@@ -257,6 +267,7 @@ module.exports = {
   addCategory,
   removeCategory,
   addServer,
+  addServerWithGeneratedApiKey,
   rotateServerApiKey,
   setServerEnabled,
   removeServer,

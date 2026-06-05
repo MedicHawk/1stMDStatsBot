@@ -57,12 +57,15 @@ module.exports = {
       .addStringOption((option) => option.setName('confirm').setDescription('Type ROTATE to confirm.').setRequired(true)))
     .addSubcommand((sub) => sub
       .setName('config')
-      .setDescription('Generate a paste-ready Reforger runtime config for a server.')
+      .setDescription('Generate a paste-ready Reforger runtime config, creating the server if needed.')
       .addStringOption((option) => option.setName('server_id').setDescription('Server ID').setRequired(true))
       .addStringOption((option) => option.setName('confirm').setDescription('Type GENERATE to rotate the key and generate config.').setRequired(true))
       .addStringOption((option) => option.setName('api_base_url').setDescription('Public API URL. Defaults to PUBLIC_API_URL.').setRequired(false))
       .addStringOption((option) => option.setName('scenario_name').setDescription('Scenario/map label to report.').setRequired(false))
-      .addIntegerOption((option) => option.setName('max_player_slots').setDescription('Configured max player slots.').setRequired(false).setMinValue(0).setMaxValue(256)))
+      .addIntegerOption((option) => option.setName('max_player_slots').setDescription('Configured max player slots.').setRequired(false).setMinValue(0).setMaxValue(256))
+      .addStringOption((option) => option.setName('name').setDescription('Display name if the server must be created.').setRequired(false))
+      .addStringOption((option) => option.setName('category').setDescription('Category slug if the server must be created. Defaults to pve.').setRequired(false))
+      .addStringOption((option) => option.setName('battlemetrics_id').setDescription('BattleMetrics server ID if the server must be created.').setRequired(false)))
     .addSubcommand((sub) => sub
       .setName('edit')
       .setDescription('Edit a server.')
@@ -164,7 +167,25 @@ module.exports = {
       }
 
       try {
-        const apiKey = await serverService.rotateServerApiKey(serverId);
+        let created = false;
+        let apiKey;
+
+        try {
+          apiKey = await serverService.rotateServerApiKey(serverId);
+        } catch (error) {
+          if (error.message !== 'Server not found') {
+            throw error;
+          }
+
+          created = true;
+          apiKey = await serverService.addServerWithGeneratedApiKey({
+            serverId,
+            name: interaction.options.getString('name') || serverId,
+            category: interaction.options.getString('category') || 'pve',
+            battlemetricsId: interaction.options.getString('battlemetrics_id')
+          });
+        }
+
         const apiBaseUrl = interaction.options.getString('api_base_url') || process.env.PUBLIC_API_URL || 'http://localhost:3000/';
         const scenarioName = interaction.options.getString('scenario_name') || 'unknown';
         const maxPlayerSlots = interaction.options.getInteger('max_player_slots') ?? 64;
@@ -176,6 +197,7 @@ module.exports = {
           targetType: 'server',
           targetId: serverId,
           details: {
+            created,
             apiBaseUrl: config.api_base_url,
             scenarioName: config.scenario_name,
             maxPlayerSlots: config.max_player_slots
@@ -183,7 +205,7 @@ module.exports = {
         });
 
         await interaction.reply({
-          content: `Paste this into \`$profile:MDST_StatsBot_Config.json\` for \`${serverId}\`:\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\`\nThis generated a new API key and invalidated the previous one.`,
+          content: `${created ? 'Server created. ' : ''}Paste this into \`$profile:MDST_StatsBot_Config.json\` for \`${serverId}\`:\n\`\`\`json\n${JSON.stringify(config, null, 2)}\n\`\`\`\nThis generated a new API key${created ? '.' : ' and invalidated the previous one.'}`,
           ephemeral: true
         });
       } catch (error) {
