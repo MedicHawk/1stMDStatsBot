@@ -42,6 +42,26 @@ async function withPlayer(server, season, payload, callback) {
   }
 }
 
+async function closeOpenSessionsForServer(connection, serverId) {
+  await connection.execute(
+    `UPDATE player_sessions
+     SET ended_at = CURRENT_TIMESTAMP,
+         duration_seconds = 0
+     WHERE server_id = :serverId AND ended_at IS NULL`,
+    { serverId }
+  );
+}
+
+async function closeOpenSessionsForPlayer(connection, serverId, playerId) {
+  await connection.execute(
+    `UPDATE player_sessions
+     SET ended_at = CURRENT_TIMESTAMP,
+         duration_seconds = 0
+     WHERE server_id = :serverId AND player_id = :playerId AND ended_at IS NULL`,
+    { serverId, playerId }
+  );
+}
+
 async function recordCombatEvent(server, season, payload) {
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
     const increments = {
@@ -200,6 +220,8 @@ async function recordObjectiveEvent(server, season, payload) {
 
 async function startSession(server, season, payload) {
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
+    await closeOpenSessionsForPlayer(connection, server.id, player.id);
+
     await connection.execute(
       `INSERT INTO player_sessions (server_id, player_id, season_id, faction, started_at)
        VALUES (:serverId, :playerId, :seasonId, :faction, COALESCE(:startedAt, CURRENT_TIMESTAMP))`,
@@ -227,15 +249,36 @@ async function endSession(server, payload) {
 }
 
 async function startMatch(server, payload) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await closeOpenSessionsForServer(connection, server.id);
+    await connection.execute(
+      `INSERT INTO matches (server_id, external_match_id, scenario, started_at)
+       VALUES (:serverId, :externalMatchId, :scenario, COALESCE(:startedAt, CURRENT_TIMESTAMP))`,
+      {
+        serverId: server.id,
+        externalMatchId: payload.external_match_id || null,
+        scenario: payload.scenario || null,
+        startedAt: payload.started_at || null
+      }
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function closeOpenServerSessions(server) {
   await pool.execute(
-    `INSERT INTO matches (server_id, external_match_id, scenario, started_at)
-     VALUES (:serverId, :externalMatchId, :scenario, COALESCE(:startedAt, CURRENT_TIMESTAMP))`,
-    {
-      serverId: server.id,
-      externalMatchId: payload.external_match_id || null,
-      scenario: payload.scenario || null,
-      startedAt: payload.started_at || null
-    }
+    `UPDATE player_sessions
+     SET ended_at = CURRENT_TIMESTAMP,
+         duration_seconds = 0
+     WHERE server_id = :serverId AND ended_at IS NULL`,
+    { serverId: server.id }
   );
 }
 
@@ -328,5 +371,6 @@ module.exports = {
   endSession,
   startMatch,
   endMatch,
+  closeOpenServerSessions,
   adjustPlayerStat
 };

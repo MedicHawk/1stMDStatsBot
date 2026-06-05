@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const pool = require('../db/pool');
 const logger = require('../utils/logger');
+const statsService = require('./statsService');
 
 let publishedMessagesTableReady = false;
 
@@ -229,6 +230,10 @@ async function recordHeartbeat(server, payload) {
       uptimeSeconds: payload.uptime_seconds ?? null
     }
   );
+
+  if (payload.player_count === 0) {
+    await statsService.closeOpenServerSessions(server);
+  }
 }
 
 async function updatePublicStatus(serverId, status) {

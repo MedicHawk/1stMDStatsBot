@@ -95,11 +95,21 @@ async function buildLeaderboard(type, filters = {}) {
       `SELECT p.display_name, p.reforger_player_id,
               SUM(
                 CASE
-                  WHEN sess.ended_at IS NULL THEN TIMESTAMPDIFF(SECOND, sess.started_at, CURRENT_TIMESTAMP)
+                  WHEN sess.ended_at IS NULL AND sess.id = open_sessions.latest_open_session_id
+                    THEN TIMESTAMPDIFF(SECOND, sess.started_at, CURRENT_TIMESTAMP)
+                  WHEN sess.ended_at IS NULL THEN 0
                   ELSE sess.duration_seconds
                 END
               ) AS value_seconds
        FROM player_sessions sess
+       LEFT JOIN (
+         SELECT server_id, player_id, MAX(id) AS latest_open_session_id
+         FROM player_sessions
+         WHERE ended_at IS NULL
+         GROUP BY server_id, player_id
+       ) open_sessions
+         ON open_sessions.server_id = sess.server_id
+        AND open_sessions.player_id = sess.player_id
        JOIN players p ON p.id = sess.player_id
        JOIN servers s ON s.id = sess.server_id
        JOIN server_categories c ON c.id = s.category_id

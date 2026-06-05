@@ -5,19 +5,35 @@
 
 class MDST_PlayerIdentityService
 {
+	protected ref map<int, ref MDST_PlayerIdentity> m_mIdentityCache = new map<int, ref MDST_PlayerIdentity>();
+
 	MDST_PlayerIdentity Resolve(int playerId)
 	{
 		PlayerManager playerManager = GetGame().GetPlayerManager();
 		if (!playerManager)
-			return null;
+			return GetCached(playerId);
 
 		string displayName = playerManager.GetPlayerName(playerId);
 		string stableId = GetStablePlayerId(playerManager, playerId);
+		MDST_PlayerIdentity cached = GetCached(playerId);
+
+		if (stableId.IsEmpty() && cached)
+			stableId = cached.m_sStableId;
+
+		if (displayName.IsEmpty() && cached)
+			displayName = cached.m_sDisplayName;
 
 		if (stableId.IsEmpty())
 			stableId = playerId.ToString();
 
-		return new MDST_PlayerIdentity(playerId, stableId, displayName);
+		MDST_PlayerIdentity identity = new MDST_PlayerIdentity(playerId, stableId, displayName);
+		m_mIdentityCache.Set(playerId, identity);
+		return identity;
+	}
+
+	protected MDST_PlayerIdentity GetCached(int playerId)
+	{
+		return m_mIdentityCache.Get(playerId);
 	}
 
 	protected string GetStablePlayerId(PlayerManager playerManager, int playerId)
