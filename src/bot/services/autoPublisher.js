@@ -10,6 +10,8 @@ const DEFAULT_STATUS_INTERVAL_MINUTES = 5;
 const DEFAULT_LEADERBOARD_INTERVAL_MINUTES = 15;
 const DEFAULT_LEADERBOARD_TYPES = ['kills', 'aikills', 'hours'];
 const DEFAULT_STATUS_OFFLINE_AFTER_MINUTES = 5;
+const ONLINE_INDICATOR = '\u{1F7E2}';
+const OFFLINE_INDICATOR = '\u{1F534}';
 
 function minutesToMs(value, fallback) {
   const parsed = Number(value);
@@ -59,20 +61,57 @@ function normalizeStatus(server) {
 function sanitizeChannelSegment(value) {
   return String(value || 'server')
     .toLowerCase()
-    .replace(/[^a-z0-9🟢🔴]+/g, '-')
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40) || 'server';
 }
 
 function buildStatusChannelName(server) {
   const status = normalizeStatus(server);
-  const indicator = status === 'online' ? '🟢' : '🔴';
+  const indicator = status === 'online' ? ONLINE_INDICATOR : OFFLINE_INDICATOR;
   const players = status === 'online' ? Number(server.current_player_count || 0) : 0;
   const maxSlots = server.max_player_slots ? Number(server.max_player_slots) : null;
   const serverName = sanitizeChannelSegment(server.name || server.server_id);
   const playerPart = maxSlots ? `${players}-${maxSlots}` : `${players}`;
 
   return `${indicator}-${serverName}-${playerPart}`.slice(0, 100);
+}
+
+function buildPresenceText(servers) {
+  const onlineServers = servers.filter((server) => normalizeStatus(server) === 'online');
+  const playerCount = onlineServers.reduce((total, server) => total + Number(server.current_player_count || 0), 0);
+  const maxSlots = onlineServers.reduce((total, server) => total + Number(server.max_player_slots || 0), 0);
+
+  if (servers.length === 0) {
+    return `${OFFLINE_INDICATOR} no servers configured`;
+  }
+
+  if (onlineServers.length === 0) {
+    return `${OFFLINE_INDICATOR} ${servers.length} servers offline`;
+  }
+
+  const playerPart = maxSlots > 0 ? `${playerCount}/${maxSlots}` : `${playerCount}`;
+  return `${ONLINE_INDICATOR} ${onlineServers.length}/${servers.length} online | ${playerPart} players`;
+}
+
+async function updateBotPresence(client, servers) {
+  if (!isEnabled(process.env.DISCORD_STATUS_PRESENCE_ENABLED)) {
+    return;
+  }
+
+  if (!client.user) {
+    return;
+  }
+
+  await client.user.setPresence({
+    status: servers.some((server) => normalizeStatus(server) === 'online') ? 'online' : 'idle',
+    activities: [
+      {
+        name: buildPresenceText(servers),
+        type: 4
+      }
+    ]
+  });
 }
 
 async function updateStatusChannelName(channel, server) {
@@ -156,9 +195,29 @@ async function upsertPublishedMessage(channel, server, messageType, payload) {
   return message;
 }
 
+async function withBattlemetricsStatus(server) {
+  const bm = await battlemetricsService.getServerStatus(server.battlemetrics_id);
+  if (!bm) {
+    return server;
+  }
+
+  return {
+    ...server,
+    current_status: bm.status,
+    current_player_count: bm.playerCount,
+    max_player_slots: bm.maxPlayers,
+    battlemetrics_rank: bm.rank
+  };
+}
+
 async function publishStatus(client) {
   const servers = await serverService.listServers({ enabledOnly: true });
+  const presenceServers = [];
+
   for (const server of servers) {
+    const merged = await withBattlemetricsStatus(server);
+    presenceServers.push(merged);
+
     if (!server.status_channel_id) {
       continue;
     }
@@ -168,21 +227,13 @@ async function publishStatus(client) {
       continue;
     }
 
-    const bm = await battlemetricsService.getServerStatus(server.battlemetrics_id);
-    const merged = bm
-      ? {
-          ...server,
-          current_status: bm.status,
-          current_player_count: bm.playerCount,
-          max_player_slots: bm.maxPlayers,
-          battlemetrics_rank: bm.rank
-        }
-      : server;
     const mods = await serverService.getServerMods(server.server_id);
 
     await updateStatusChannelName(channel, merged);
     await upsertPublishedMessage(channel, server, 'status', { embeds: [serverEmbed(merged, mods)] });
   }
+
+  await updateBotPresence(client, presenceServers);
 }
 
 async function publishLeaderboards(client) {
@@ -256,7 +307,8 @@ function startAutoPublisher(client) {
     status_minutes: statusIntervalMs / 60000,
     leaderboard_minutes: leaderboardIntervalMs / 60000,
     leaderboard_types: leaderboardTypes(),
-    status_rename_enabled: isEnabled(process.env.DISCORD_STATUS_RENAME_ENABLED)
+    status_rename_enabled: isEnabled(process.env.DISCORD_STATUS_RENAME_ENABLED),
+    status_presence_enabled: isEnabled(process.env.DISCORD_STATUS_PRESENCE_ENABLED)
   }, 'Discord auto-publisher started');
 }
 
@@ -265,5 +317,6 @@ module.exports = {
   publishStatus,
   publishLeaderboards,
   buildStatusChannelName,
+  buildPresenceText,
   upsertPublishedMessage
 };

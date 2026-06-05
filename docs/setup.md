@@ -39,6 +39,8 @@ Status channels:
 
 The bot posts one status embed there and edits it on each refresh. When `DISCORD_STATUS_RENAME_ENABLED=true`, it also renames the channel with the latest status and player count, such as `🟢-1stmd-pvp-12-64` or `🔴-1stmd-pvp-0-64`. The bot role needs Discord's Manage Channels permission for channel-name updates.
 
+When `DISCORD_STATUS_PRESENCE_ENABLED=true`, the bot rich presence also shows aggregate server status, such as online server count and total players.
+
 Leaderboard channels work the same way: `/leaderboardchannel set` maps a channel, then the bot maintains one refreshed leaderboard message for that server instead of posting a new message each interval.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
