@@ -118,6 +118,44 @@ async function fetchTextChannel(client, channelId) {
   return channel;
 }
 
+async function upsertPublishedMessage(channel, server, messageType, payload) {
+  const existing = await serverService.getPublishedMessage(server.server_id, messageType);
+
+  if (existing && existing.channel_id === channel.id) {
+    const message = await channel.messages.fetch(existing.message_id).catch((error) => {
+      logger.warn({
+        server_id: server.server_id,
+        channel_id: channel.id,
+        message_id: existing.message_id,
+        message_type: messageType,
+        error
+      }, 'Failed to fetch previous published Discord message');
+      return null;
+    });
+
+    if (message) {
+      await message.edit(payload);
+      logger.info({
+        server_id: server.server_id,
+        channel_id: channel.id,
+        message_id: message.id,
+        message_type: messageType
+      }, 'Updated published Discord message');
+      return message;
+    }
+  }
+
+  const message = await channel.send(payload);
+  await serverService.setPublishedMessage(server.server_id, messageType, channel.id, message.id);
+  logger.info({
+    server_id: server.server_id,
+    channel_id: channel.id,
+    message_id: message.id,
+    message_type: messageType
+  }, 'Created published Discord message');
+  return message;
+}
+
 async function publishStatus(client) {
   const servers = await serverService.listServers({ enabledOnly: true });
   for (const server of servers) {
@@ -143,8 +181,7 @@ async function publishStatus(client) {
     const mods = await serverService.getServerMods(server.server_id);
 
     await updateStatusChannelName(channel, merged);
-    await channel.send({ embeds: [serverEmbed(merged, mods)] });
-    logger.info({ server_id: server.server_id, channel_id: channel.id }, 'Published server status embed');
+    await upsertPublishedMessage(channel, server, 'status', { embeds: [serverEmbed(merged, mods)] });
   }
 }
 
@@ -175,7 +212,7 @@ async function publishLeaderboards(client) {
       continue;
     }
 
-    await channel.send({ embeds: embeds.slice(0, 10) });
+    await upsertPublishedMessage(channel, server, 'leaderboard', { embeds: embeds.slice(0, 10) });
     logger.info({ server_id: server.server_id, channel_id: channel.id, types }, 'Published leaderboard embeds');
   }
 }
@@ -227,5 +264,6 @@ module.exports = {
   startAutoPublisher,
   publishStatus,
   publishLeaderboards,
-  buildStatusChannelName
+  buildStatusChannelName,
+  upsertPublishedMessage
 };

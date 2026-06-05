@@ -37,7 +37,9 @@ Status channels:
 /statuschannel set server_id: pvp-1 channel: #server-status
 ```
 
-The bot posts status embeds there and, when `DISCORD_STATUS_RENAME_ENABLED=true`, renames the channel with the latest status and player count, such as `🟢-1stmd-pvp-12-64` or `🔴-1stmd-pvp-0-64`. The bot role needs Discord's Manage Channels permission for channel-name updates.
+The bot posts one status embed there and edits it on each refresh. When `DISCORD_STATUS_RENAME_ENABLED=true`, it also renames the channel with the latest status and player count, such as `🟢-1stmd-pvp-12-64` or `🔴-1stmd-pvp-0-64`. The bot role needs Discord's Manage Channels permission for channel-name updates.
+
+Leaderboard channels work the same way: `/leaderboardchannel set` maps a channel, then the bot maintains one refreshed leaderboard message for that server instead of posting a new message each interval.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 

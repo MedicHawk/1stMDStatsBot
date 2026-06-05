@@ -3,8 +3,30 @@ const crypto = require('crypto');
 const pool = require('../db/pool');
 const logger = require('../utils/logger');
 
+let publishedMessagesTableReady = false;
+
 function generateApiKey() {
   return crypto.randomBytes(24).toString('hex');
+}
+
+async function ensurePublishedMessagesTable() {
+  if (publishedMessagesTableReady) {
+    return;
+  }
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS discord_published_messages (
+       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       server_id VARCHAR(64) NOT NULL,
+       message_type VARCHAR(32) NOT NULL,
+       channel_id VARCHAR(32) NOT NULL,
+       message_id VARCHAR(32) NOT NULL,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       UNIQUE KEY uniq_discord_published_message (server_id, message_type)
+     )`
+  );
+  publishedMessagesTableReady = true;
 }
 
 async function listServers({ enabledOnly = false } = {}) {
@@ -20,6 +42,30 @@ async function listServers({ enabledOnly = false } = {}) {
     { enabledOnly }
   );
   return rows;
+}
+
+async function getPublishedMessage(serverId, messageType) {
+  await ensurePublishedMessagesTable();
+  const [rows] = await pool.execute(
+    `SELECT server_id, message_type, channel_id, message_id
+     FROM discord_published_messages
+     WHERE server_id = :serverId AND message_type = :messageType`,
+    { serverId, messageType }
+  );
+  return rows[0] || null;
+}
+
+async function setPublishedMessage(serverId, messageType, channelId, messageId) {
+  await ensurePublishedMessagesTable();
+  await pool.execute(
+    `INSERT INTO discord_published_messages (server_id, message_type, channel_id, message_id)
+     VALUES (:serverId, :messageType, :channelId, :messageId)
+     ON DUPLICATE KEY UPDATE
+       channel_id = VALUES(channel_id),
+       message_id = VALUES(message_id),
+       updated_at = CURRENT_TIMESTAMP`,
+    { serverId, messageType, channelId, messageId }
+  );
 }
 
 async function listCategories() {
@@ -263,6 +309,9 @@ async function audit({ actorDiscordId, action, targetType, targetId, details }) 
 
 module.exports = {
   listServers,
+  ensurePublishedMessagesTable,
+  getPublishedMessage,
+  setPublishedMessage,
   listCategories,
   addCategory,
   removeCategory,

@@ -247,6 +247,17 @@ CREATE TABLE IF NOT EXISTS server_mods (
   CONSTRAINT fk_mods_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS discord_published_messages (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  server_id VARCHAR(64) NOT NULL,
+  message_type VARCHAR(32) NOT NULL,
+  channel_id VARCHAR(32) NOT NULL,
+  message_id VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_discord_published_message (server_id, message_type)
+);
+
 CREATE TABLE IF NOT EXISTS leaderboard_cache (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   leaderboard_type VARCHAR(64) NOT NULL,
