@@ -30,6 +30,14 @@ Generate a complete paste-ready game server config, including a fresh API key:
 ```
 
 This rotates the server API key and returns the full `$profile:MDST_StatsBot_Config.json` content in an ephemeral Discord response. If the server does not exist yet, it creates it first. Use optional `name`, `category`, and `battlemetrics_id` values to control the created server row.
+
+Status channels:
+
+```text
+/statuschannel set server_id: pvp-1 channel: #online-0-of-64-pvp-1
+```
+
+The bot posts status embeds there and, when `DISCORD_STATUS_RENAME_ENABLED=true`, renames the channel with the latest status and player count. The bot role needs Discord's Manage Channels permission for channel-name updates.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 

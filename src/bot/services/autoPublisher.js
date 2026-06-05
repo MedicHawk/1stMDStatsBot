@@ -9,6 +9,7 @@ const MIN_INTERVAL_MS = 60 * 1000;
 const DEFAULT_STATUS_INTERVAL_MINUTES = 5;
 const DEFAULT_LEADERBOARD_INTERVAL_MINUTES = 15;
 const DEFAULT_LEADERBOARD_TYPES = ['kills', 'aikills', 'hours'];
+const DEFAULT_STATUS_OFFLINE_AFTER_MINUTES = 5;
 
 function minutesToMs(value, fallback) {
   const parsed = Number(value);
@@ -23,6 +24,79 @@ function leaderboardTypes() {
     .split(',')
     .map((type) => type.trim())
     .filter(Boolean);
+}
+
+function isEnabled(value) {
+  return value !== 'false';
+}
+
+function isFreshHeartbeat(server) {
+  if (!server.last_heartbeat_at) {
+    return false;
+  }
+
+  const lastHeartbeat = new Date(server.last_heartbeat_at).getTime();
+  if (!Number.isFinite(lastHeartbeat)) {
+    return false;
+  }
+
+  const offlineAfterMs = minutesToMs(
+    process.env.DISCORD_STATUS_OFFLINE_AFTER_MINUTES,
+    DEFAULT_STATUS_OFFLINE_AFTER_MINUTES
+  );
+  return Date.now() - lastHeartbeat <= offlineAfterMs;
+}
+
+function normalizeStatus(server) {
+  const rawStatus = String(server.current_status || 'unknown').toLowerCase();
+  if (rawStatus === 'online' && isFreshHeartbeat(server)) {
+    return 'online';
+  }
+
+  return 'offline';
+}
+
+function sanitizeChannelSegment(value) {
+  return String(value || 'server')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'server';
+}
+
+function buildStatusChannelName(server) {
+  const status = normalizeStatus(server);
+  const players = status === 'online' ? Number(server.current_player_count || 0) : 0;
+  const maxSlots = server.max_player_slots ? Number(server.max_player_slots) : null;
+  const serverName = sanitizeChannelSegment(server.server_id || server.name);
+  const playerPart = maxSlots ? `${players}-of-${maxSlots}` : `${players}-players`;
+
+  return `${status}-${playerPart}-${serverName}`.slice(0, 100);
+}
+
+async function updateStatusChannelName(channel, server) {
+  if (!isEnabled(process.env.DISCORD_STATUS_RENAME_ENABLED)) {
+    return;
+  }
+
+  if (!channel || typeof channel.setName !== 'function') {
+    return;
+  }
+
+  const nextName = buildStatusChannelName(server);
+  if (channel.name === nextName) {
+    return;
+  }
+
+  await channel.setName(nextName, `1stMD status update for ${server.server_id}`).catch((error) => {
+    logger.warn({
+      server_id: server.server_id,
+      channel_id: channel.id,
+      current_name: channel.name,
+      next_name: nextName,
+      error
+    }, 'Failed to update status channel name');
+  });
 }
 
 async function fetchTextChannel(client, channelId) {
@@ -67,6 +141,7 @@ async function publishStatus(client) {
       : server;
     const mods = await serverService.getServerMods(server.server_id);
 
+    await updateStatusChannelName(channel, merged);
     await channel.send({ embeds: [serverEmbed(merged, mods)] });
     logger.info({ server_id: server.server_id, channel_id: channel.id }, 'Published server status embed');
   }
@@ -128,7 +203,7 @@ function schedulePublisher(name, intervalMs, publisher) {
 }
 
 function startAutoPublisher(client) {
-  if (process.env.DISCORD_AUTO_PUBLISH_ENABLED === 'false') {
+  if (!isEnabled(process.env.DISCORD_AUTO_PUBLISH_ENABLED)) {
     logger.info('Discord auto-publisher disabled');
     return;
   }
@@ -142,12 +217,14 @@ function startAutoPublisher(client) {
   logger.info({
     status_minutes: statusIntervalMs / 60000,
     leaderboard_minutes: leaderboardIntervalMs / 60000,
-    leaderboard_types: leaderboardTypes()
+    leaderboard_types: leaderboardTypes(),
+    status_rename_enabled: isEnabled(process.env.DISCORD_STATUS_RENAME_ENABLED)
   }, 'Discord auto-publisher started');
 }
 
 module.exports = {
   startAutoPublisher,
   publishStatus,
-  publishLeaderboards
+  publishLeaderboards,
+  buildStatusChannelName
 };
