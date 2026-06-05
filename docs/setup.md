@@ -6,6 +6,14 @@
 4. Run `npm install`.
 5. Load `src/db/schema.sql` into MySQL.
 6. Register slash commands with `npm run register-commands`.
+
+Admin reset command:
+
+```text
+/admin reset-all confirm: RESET ALL
+```
+
+Use `keep_accounts: true` to keep linked Discord/Reforger accounts while clearing servers and server-scoped stats.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 
