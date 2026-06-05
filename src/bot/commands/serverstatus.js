@@ -22,7 +22,6 @@ module.exports = {
     const merged = bm
       ? { ...selected, current_status: bm.status, current_player_count: bm.playerCount, max_player_slots: bm.maxPlayers, battlemetrics_rank: bm.rank }
       : selected;
-    const mods = await serverService.getServerMods(selected.server_id);
-    await interaction.editReply({ embeds: [serverEmbed(merged, mods)] });
+    await interaction.editReply({ embeds: [serverEmbed(merged)] });
   }
 };

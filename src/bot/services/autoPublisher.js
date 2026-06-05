@@ -227,10 +227,8 @@ async function publishStatus(client) {
       continue;
     }
 
-    const mods = await serverService.getServerMods(server.server_id);
-
     await updateStatusChannelName(channel, merged);
-    await upsertPublishedMessage(channel, server, 'status', { embeds: [serverEmbed(merged, mods)] });
+    await upsertPublishedMessage(channel, server, 'status', { embeds: [serverEmbed(merged)] });
   }
 
   await updateBotPresence(client, presenceServers);
