@@ -15,6 +15,14 @@ Admin reset command:
 
 Use `keep_accounts: true` to keep linked Discord/Reforger accounts while clearing servers and server-scoped stats.
 
+Speak as the bot:
+
+```text
+/admin say channel: #announcements message: Server restart in 10 minutes.
+```
+
+Mentions are suppressed by default. Set `allow_mentions: true` when you intentionally want the bot message to ping users or roles.
+
 Generate a fresh server API key:
 
 ```text

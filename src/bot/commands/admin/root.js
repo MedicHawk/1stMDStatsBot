@@ -23,7 +23,22 @@ module.exports = {
         .setRequired(true))
       .addBooleanOption((option) => option
         .setName('keep_accounts')
-        .setDescription('Keep linked player/account data while clearing servers and stats.'))),
+        .setDescription('Keep linked player/account data while clearing servers and stats.')))
+    .addSubcommand((sub) => sub
+      .setName('say')
+      .setDescription('Send a message as the bot.')
+      .addChannelOption((option) => option
+        .setName('channel')
+        .setDescription('Channel to send the message to.')
+        .setRequired(true))
+      .addStringOption((option) => option
+        .setName('message')
+        .setDescription('Message content.')
+        .setRequired(true)
+        .setMaxLength(2000))
+      .addBooleanOption((option) => option
+        .setName('allow_mentions')
+        .setDescription('Allow user, role, and everyone mentions in the sent message.'))),
   async execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
 
@@ -60,6 +75,36 @@ module.exports = {
       await interaction.editReply({
         content: `Reset complete. Deleted rows:\n\`\`\`\n${summary}\n\`\`\``
       });
+      return;
+    }
+
+    if (subcommand === 'say') {
+      const channel = interaction.options.getChannel('channel');
+      const message = interaction.options.getString('message');
+      const allowMentions = interaction.options.getBoolean('allow_mentions') === true;
+
+      if (!channel || !channel.isTextBased() || typeof channel.send !== 'function') {
+        await interaction.reply({ content: 'That channel cannot receive bot messages.', ephemeral: true });
+        return;
+      }
+
+      await channel.send({
+        content: message,
+        allowedMentions: allowMentions ? undefined : { parse: [] }
+      });
+
+      await serverService.audit({
+        actorDiscordId: interaction.user.id,
+        action: 'admin.say',
+        targetType: 'channel',
+        targetId: channel.id,
+        details: {
+          messageLength: message.length,
+          allowMentions
+        }
+      });
+
+      await interaction.reply({ content: `Sent message to ${channel}.`, ephemeral: true });
     }
   }
 };
