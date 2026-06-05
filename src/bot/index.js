@@ -3,6 +3,7 @@ require('dotenv').config();
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const logger = require('../utils/logger');
 const commands = require('./commands');
+const { startAutoPublisher } = require('./services/autoPublisher');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -15,6 +16,7 @@ for (const command of commands) {
 
 client.once('clientReady', () => {
   logger.info({ tag: client.user.tag, commands: client.commands.size }, 'Discord bot ready');
+  startAutoPublisher(client);
 });
 
 client.on('interactionCreate', require('./events/interactionCreate'));
