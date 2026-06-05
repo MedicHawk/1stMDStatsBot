@@ -22,6 +22,14 @@ Generate a fresh server API key:
 ```
 
 The new raw key is only shown in the ephemeral Discord response. Copy it into the game server profile config and restart that Reforger server.
+
+Generate a complete paste-ready game server config, including a fresh API key:
+
+```text
+/server config server_id: hosted-main confirm: GENERATE
+```
+
+This rotates the server API key and returns the full `$profile:MDST_StatsBot_Config.json` content in an ephemeral Discord response.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 
