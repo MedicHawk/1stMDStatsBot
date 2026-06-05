@@ -34,10 +34,10 @@ This rotates the server API key and returns the full `$profile:MDST_StatsBot_Con
 Status channels:
 
 ```text
-/statuschannel set server_id: pvp-1 channel: #online-0-of-64-pvp-1
+/statuschannel set server_id: pvp-1 channel: #server-status
 ```
 
-The bot posts status embeds there and, when `DISCORD_STATUS_RENAME_ENABLED=true`, renames the channel with the latest status and player count. The bot role needs Discord's Manage Channels permission for channel-name updates.
+The bot posts status embeds there and, when `DISCORD_STATUS_RENAME_ENABLED=true`, renames the channel with the latest status and player count, such as `🟢-1stmd-pvp-12-64` or `🔴-1stmd-pvp-0-64`. The bot role needs Discord's Manage Channels permission for channel-name updates.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 

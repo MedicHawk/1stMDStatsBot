@@ -59,19 +59,20 @@ function normalizeStatus(server) {
 function sanitizeChannelSegment(value) {
   return String(value || 'server')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/[^a-z0-9🟢🔴]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40) || 'server';
 }
 
 function buildStatusChannelName(server) {
   const status = normalizeStatus(server);
+  const indicator = status === 'online' ? '🟢' : '🔴';
   const players = status === 'online' ? Number(server.current_player_count || 0) : 0;
   const maxSlots = server.max_player_slots ? Number(server.max_player_slots) : null;
-  const serverName = sanitizeChannelSegment(server.server_id || server.name);
-  const playerPart = maxSlots ? `${players}-of-${maxSlots}` : `${players}-players`;
+  const serverName = sanitizeChannelSegment(server.name || server.server_id);
+  const playerPart = maxSlots ? `${players}-${maxSlots}` : `${players}`;
 
-  return `${status}-${playerPart}-${serverName}`.slice(0, 100);
+  return `${indicator}-${serverName}-${playerPart}`.slice(0, 100);
 }
 
 async function updateStatusChannelName(channel, server) {
