@@ -28,6 +28,11 @@ module.exports = {
       .setDescription('Remove a configured server.')
       .addStringOption((option) => option.setName('server_id').setDescription('Server ID').setRequired(true)))
     .addSubcommand((sub) => sub
+      .setName('rotate-key')
+      .setDescription('Generate and store a new API key for a server.')
+      .addStringOption((option) => option.setName('server_id').setDescription('Server ID').setRequired(true))
+      .addStringOption((option) => option.setName('confirm').setDescription('Type ROTATE to confirm.').setRequired(true)))
+    .addSubcommand((sub) => sub
       .setName('edit')
       .setDescription('Edit a server.')
       .addStringOption((option) => option.setName('server_id').setDescription('Server ID').setRequired(true))
@@ -92,6 +97,28 @@ module.exports = {
         await interaction.reply({ content: 'Server removed.', ephemeral: true });
       } catch (error) {
         await interaction.reply({ content: error.message || 'Could not remove server.', ephemeral: true });
+      }
+      return;
+    }
+
+    if (subcommand === 'rotate-key') {
+      const serverId = interaction.options.getString('server_id');
+      const confirmation = interaction.options.getString('confirm');
+
+      if (confirmation !== 'ROTATE') {
+        await interaction.reply({ content: 'Key rotation cancelled. The confirmation must be exactly `ROTATE`.', ephemeral: true });
+        return;
+      }
+
+      try {
+        const apiKey = await serverService.rotateServerApiKey(serverId);
+        await serverService.audit({ actorDiscordId: interaction.user.id, action: 'server.rotate_key', targetType: 'server', targetId: serverId });
+        await interaction.reply({
+          content: `New API key for \`${serverId}\`:\n\`\`\`\n${apiKey}\n\`\`\`\nStore it now. It is shown once and only the hash is saved.`,
+          ephemeral: true
+        });
+      } catch (error) {
+        await interaction.reply({ content: error.message || 'Could not rotate server API key.', ephemeral: true });
       }
       return;
     }

@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const pool = require('../db/pool');
 const logger = require('../utils/logger');
 
@@ -56,6 +57,23 @@ async function addServer(input) {
     error.statusCode = 400;
     throw error;
   }
+}
+
+async function rotateServerApiKey(serverId) {
+  const apiKey = crypto.randomBytes(24).toString('hex');
+  const apiKeyHash = await bcrypt.hash(apiKey, 12);
+  const [result] = await pool.execute(
+    'UPDATE servers SET api_key_hash = :apiKeyHash WHERE server_id = :serverId',
+    { serverId, apiKeyHash }
+  );
+
+  if (result.affectedRows === 0) {
+    const error = new Error('Server not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return apiKey;
 }
 
 async function setServerEnabled(serverId, enabled) {
@@ -239,6 +257,7 @@ module.exports = {
   addCategory,
   removeCategory,
   addServer,
+  rotateServerApiKey,
   setServerEnabled,
   removeServer,
   editServer,

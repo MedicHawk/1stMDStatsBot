@@ -14,6 +14,14 @@ Admin reset command:
 ```
 
 Use `keep_accounts: true` to keep linked Discord/Reforger accounts while clearing servers and server-scoped stats.
+
+Generate a fresh server API key:
+
+```text
+/server rotate-key server_id: hosted-main confirm: ROTATE
+```
+
+The new raw key is only shown in the ephemeral Discord response. Copy it into the game server profile config and restart that Reforger server.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 
