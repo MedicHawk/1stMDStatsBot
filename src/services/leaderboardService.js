@@ -5,7 +5,7 @@ const SQL_BY_TYPE = {
   kills: 'ps.player_kills',
   aikills: 'ps.ai_kills',
   deaths: 'ps.deaths',
-  hours: 'SUM(sess.duration_seconds) / 3600',
+  hours: 'SUM(sess.duration_seconds)',
   revives: 'ms.revives',
   distance: 'mv.distance_foot_meters + mv.distance_vehicle_meters'
 };
@@ -85,7 +85,7 @@ async function buildLeaderboard(type, filters = {}) {
 
   if (type === 'hours') {
     const [rows] = await pool.execute(
-      `SELECT p.display_name, p.reforger_player_id, SUM(sess.duration_seconds) / 3600 AS value
+      `SELECT p.display_name, p.reforger_player_id, SUM(sess.duration_seconds) AS value_seconds
        FROM player_sessions sess
        JOIN players p ON p.id = sess.player_id
        JOIN servers s ON s.id = sess.server_id
@@ -94,7 +94,7 @@ async function buildLeaderboard(type, filters = {}) {
          AND (:category IS NULL OR c.slug = :category)
          AND (:seasonId IS NULL OR sess.season_id = :seasonId)
        GROUP BY p.id, p.display_name, p.reforger_player_id
-       ORDER BY value DESC
+       ORDER BY value_seconds DESC
        LIMIT ${limit}`,
       queryFilters
     );
