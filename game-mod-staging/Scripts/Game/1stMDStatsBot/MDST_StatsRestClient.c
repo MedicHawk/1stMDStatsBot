@@ -117,7 +117,20 @@ class MDST_StatsRestClient
 
 	protected string BuildAuthenticatedEndpoint(string endpoint)
 	{
-		return string.Format("%1?server_id=%2&api_key=%3", endpoint, m_sServerId, m_sApiKey);
+		return string.Format("%1?server_id=%2&api_key=%3", endpoint, EncodeQueryComponent(m_sServerId), EncodeQueryComponent(m_sApiKey));
+	}
+
+	protected string EncodeQueryComponent(string value)
+	{
+		string encoded = value;
+		encoded.Replace("%", "%25");
+		encoded.Replace(" ", "%20");
+		encoded.Replace("+", "%2B");
+		encoded.Replace("&", "%26");
+		encoded.Replace("=", "%3D");
+		encoded.Replace("?", "%3F");
+		encoded.Replace("#", "%23");
+		return encoded;
 	}
 
 	void Post(string endpoint, string json)
