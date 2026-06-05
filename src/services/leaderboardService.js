@@ -11,9 +11,16 @@ const SQL_BY_TYPE = {
 };
 
 async function getLeaderboard(type, filters = {}) {
-  const cache = await getCachedLeaderboard(type, filters);
-  if (cache) return cache;
+  if (wantsCachedLeaderboard(filters)) {
+    const cache = await getCachedLeaderboard(type, filters);
+    if (cache) return cache;
+  }
+
   return buildLeaderboard(type, filters);
+}
+
+function wantsCachedLeaderboard(filters = {}) {
+  return filters.cached === true || filters.cached === 'true' || filters.cache === true || filters.cache === 'true';
 }
 
 async function refreshLeaderboard(type, filters = {}) {
@@ -85,7 +92,13 @@ async function buildLeaderboard(type, filters = {}) {
 
   if (type === 'hours') {
     const [rows] = await pool.execute(
-      `SELECT p.display_name, p.reforger_player_id, SUM(sess.duration_seconds) AS value_seconds
+      `SELECT p.display_name, p.reforger_player_id,
+              SUM(
+                CASE
+                  WHEN sess.ended_at IS NULL THEN TIMESTAMPDIFF(SECOND, sess.started_at, CURRENT_TIMESTAMP)
+                  ELSE sess.duration_seconds
+                END
+              ) AS value_seconds
        FROM player_sessions sess
        JOIN players p ON p.id = sess.player_id
        JOIN servers s ON s.id = sess.server_id

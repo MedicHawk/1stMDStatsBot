@@ -27,7 +27,7 @@ Returns the last reported mod list for a server.
 
 `GET /api/public/leaderboards/:type`
 
-Returns cached or live leaderboard rows. Supported types include `kills`, `aikills`, `deaths`, `hours`, `revives`, and `distance`.
+Returns live leaderboard rows by default. Add `?cached=true` to read the refreshed cache instead. Supported types include `kills`, `aikills`, `deaths`, `hours`, `revives`, and `distance`.
 
 ## Linking
 
