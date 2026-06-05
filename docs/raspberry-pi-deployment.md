@@ -29,6 +29,7 @@ Set production values in `.env`:
 ```env
 NODE_ENV=production
 LOG_LEVEL=info
+TZ=UTC
 API_PORT=3000
 PUBLIC_API_URL=https://stats.your-domain.example
 TRUST_PROXY=1

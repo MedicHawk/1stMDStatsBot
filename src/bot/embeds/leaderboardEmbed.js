@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { formatUtc } = require('../../utils/time');
 
 function leaderboardEmbed(result) {
   const rows = result.rows || [];
@@ -9,7 +10,7 @@ function leaderboardEmbed(result) {
   return new EmbedBuilder()
     .setTitle(`${result.type} leaderboard`)
     .setDescription(description)
-    .setFooter({ text: result.cached ? `Cached at ${result.refreshed_at}` : 'Live placeholder query' });
+    .setFooter({ text: result.cached ? `Cached at ${formatUtc(result.refreshed_at)}` : 'Live placeholder query' });
 }
 
 module.exports = leaderboardEmbed;

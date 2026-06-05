@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { formatUtc } = require('../../utils/time');
 
 function serverEmbed(server, mods = []) {
   return new EmbedBuilder()
@@ -11,7 +12,7 @@ function serverEmbed(server, mods = []) {
       { name: 'BattleMetrics Rank', value: server.battlemetrics_rank ? `#${server.battlemetrics_rank}` : 'Unavailable', inline: true },
       { name: 'Mods', value: `${mods.length} installed`, inline: true }
     )
-    .setFooter({ text: `Last heartbeat: ${server.last_heartbeat_at || 'never'}` });
+    .setFooter({ text: `Last heartbeat: ${formatUtc(server.last_heartbeat_at)}` });
 }
 
 module.exports = serverEmbed;

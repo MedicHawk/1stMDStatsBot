@@ -5,7 +5,8 @@ module.exports = {
       script: 'src/api/server.js',
       cwd: __dirname,
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        TZ: 'UTC'
       }
     },
     {
@@ -13,7 +14,8 @@ module.exports = {
       script: 'src/bot/index.js',
       cwd: __dirname,
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        TZ: 'UTC'
       }
     },
     {
@@ -23,7 +25,8 @@ module.exports = {
       cron_restart: '*/10 * * * *',
       autorestart: false,
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        TZ: 'UTC'
       }
     }
   ]
