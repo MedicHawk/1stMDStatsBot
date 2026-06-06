@@ -15,6 +15,7 @@ class MDST_PlayerIdentityService
 
 		string displayName = playerManager.GetPlayerName(playerId);
 		string stableId = GetStablePlayerId(playerManager, playerId);
+		string rankName = GetRankName(playerManager, playerId);
 		MDST_PlayerIdentity cached = GetCached(playerId);
 
 		if (stableId.IsEmpty() && cached)
@@ -23,10 +24,13 @@ class MDST_PlayerIdentityService
 		if (displayName.IsEmpty() && cached)
 			displayName = cached.m_sDisplayName;
 
+		if (rankName.IsEmpty() && cached)
+			rankName = cached.m_sRankName;
+
 		if (stableId.IsEmpty())
 			stableId = playerId.ToString();
 
-		MDST_PlayerIdentity identity = new MDST_PlayerIdentity(playerId, stableId, displayName);
+		MDST_PlayerIdentity identity = new MDST_PlayerIdentity(playerId, stableId, displayName, rankName);
 		m_mIdentityCache.Set(playerId, identity);
 		return identity;
 	}
@@ -46,5 +50,14 @@ class MDST_PlayerIdentityService
 
 		// Fallback keeps local tests moving, but production stats should rely on the stable identity above.
 		return playerId.ToString();
+	}
+
+	protected string GetRankName(PlayerManager playerManager, int playerId)
+	{
+		IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
+		if (!playerEntity)
+			return "";
+
+		return SCR_CharacterRankComponent.GetCharacterRankName(playerEntity);
 	}
 }

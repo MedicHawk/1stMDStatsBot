@@ -51,12 +51,14 @@ class MDST_PlayerIdentity
 	int m_iPlayerId;
 	string m_sStableId;
 	string m_sDisplayName;
+	string m_sRankName;
 
-	void MDST_PlayerIdentity(int playerId, string stableId, string displayName)
+	void MDST_PlayerIdentity(int playerId, string stableId, string displayName, string rankName = "")
 	{
 		m_iPlayerId = playerId;
 		m_sStableId = stableId;
 		m_sDisplayName = displayName;
+		m_sRankName = rankName;
 	}
 
 	bool IsValid()

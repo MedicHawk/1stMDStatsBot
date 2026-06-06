@@ -116,6 +116,7 @@ async function ensureSupportSchema() {
 
   await ensureColumn('medical_stats', 'heals', 'heals INT UNSIGNED NOT NULL DEFAULT 0 AFTER tourniquets_used');
   await ensureColumn('vehicle_stats', 'repairs', 'repairs INT UNSIGNED NOT NULL DEFAULT 0 AFTER crashes');
+  await ensureColumn('player_sessions', 'rank_name', 'rank_name VARCHAR(80) NULL AFTER faction');
 
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS support_stats (
@@ -290,6 +291,19 @@ async function recordCombatEvent(server, season, payload) {
     }
 
     await killFeedService.recordKillFeedEvent(connection, server, player, payload);
+    if (payload.rank_name) {
+      await connection.execute(
+        `UPDATE player_sessions
+         SET rank_name = :rankName
+         WHERE server_id = :serverId
+           AND player_id = :playerId
+           AND ended_at IS NULL
+         ORDER BY started_at DESC
+         LIMIT 1`,
+        { serverId: server.id, playerId: player.id, rankName: payload.rank_name }
+      );
+    }
+
     await awardXp(connection, server, player, seasonId, 'combat', payload.event_type, payload);
   });
 }
@@ -453,7 +467,7 @@ async function getPlayerSnapshot(server, season, reforgerPlayerId) {
   }
 
   const [[session]] = await pool.execute(
-    `SELECT id, started_at
+    `SELECT id, started_at, rank_name
      FROM player_sessions
      WHERE server_id = :serverId
        AND player_id = :playerId
@@ -517,7 +531,7 @@ async function getPlayerSnapshot(server, season, reforgerPlayerId) {
     { serverId: server.id, xp }
   );
 
-  const kd = deaths > 0 ? (kills / deaths).toFixed(2) : kills > 0 ? 'Perfect' : '0.00';
+  const kd = (kills / Math.max(deaths, 1)).toFixed(2);
 
   return {
     kills,
@@ -527,6 +541,7 @@ async function getPlayerSnapshot(server, season, reforgerPlayerId) {
     teamkills: Number(stats.teamkills || 0),
     kd,
     rank: Number(rankRow.rank || 1),
+    rank_name: session?.rank_name || null,
     xp,
     session_id: session?.id || null
   };
@@ -537,9 +552,9 @@ async function startSession(server, season, payload) {
     await closeOpenSessionsForPlayer(connection, server.id, player.id);
 
     await connection.execute(
-      `INSERT INTO player_sessions (server_id, player_id, season_id, faction, started_at)
-       VALUES (:serverId, :playerId, :seasonId, :faction, COALESCE(:startedAt, CURRENT_TIMESTAMP))`,
-      { serverId: server.id, playerId: player.id, seasonId, faction: payload.faction || null, startedAt: payload.started_at || null }
+      `INSERT INTO player_sessions (server_id, player_id, season_id, faction, rank_name, started_at)
+       VALUES (:serverId, :playerId, :seasonId, :faction, :rankName, COALESCE(:startedAt, CURRENT_TIMESTAMP))`,
+      { serverId: server.id, playerId: player.id, seasonId, faction: payload.faction || null, rankName: payload.rank_name || null, startedAt: payload.started_at || null }
     );
   });
 }

@@ -35,7 +35,7 @@ function buildKillToastText(eventType, snapshot) {
     : eventType === 'ai_kill'
       ? 'AI Kill'
       : 'Kill Confirmed';
-  const rank = snapshot.rank ? `#${snapshot.rank}` : 'Unranked';
+  const rank = snapshot.rank_name || 'Unranked';
 
   return `${title}\nK/D ${snapshot.kd} | Rank ${rank} | XP ${formatNumber(snapshot.xp)}`;
 }

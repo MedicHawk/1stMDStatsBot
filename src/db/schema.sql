@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS player_sessions (
   season_id BIGINT UNSIGNED NULL,
   match_id BIGINT UNSIGNED NULL,
   faction VARCHAR(120) NULL,
+  rank_name VARCHAR(80) NULL,
   started_at TIMESTAMP NOT NULL,
   ended_at TIMESTAMP NULL,
   duration_seconds BIGINT UNSIGNED NOT NULL DEFAULT 0,

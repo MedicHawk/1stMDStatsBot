@@ -213,7 +213,8 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 
 		string json = "{" +
 			MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + "," +
-			MDST_Json.PairString("player_name", identity.m_sDisplayName) +
+			MDST_Json.PairString("player_name", identity.m_sDisplayName) + "," +
+			MDST_Json.PairString("rank_name", identity.m_sRankName) +
 		"}";
 
 		m_RestClient.Post("api/ingest/session/start", json);
@@ -269,6 +270,7 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 		string json = "{";
 		json += MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + ",";
 		json += MDST_Json.PairString("player_name", identity.m_sDisplayName) + ",";
+		json += MDST_Json.PairString("rank_name", identity.m_sRankName) + ",";
 		json += MDST_Json.PairString("event_type", eventType) + ",";
 		json += MDST_Json.PairString("weapon_id", weaponId) + ",";
 		json += MDST_Json.PairString("weapon_name", weaponName) + ",";
@@ -309,6 +311,7 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 		string json = "{";
 		json += MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + ",";
 		json += MDST_Json.PairString("player_name", identity.m_sDisplayName) + ",";
+		json += MDST_Json.PairString("rank_name", identity.m_sRankName) + ",";
 		json += MDST_Json.PairString("event_type", eventType) + ",";
 		json += MDST_Json.PairString("target_reforger_id", targetStableId) + ",";
 		json += MDST_Json.PairString("target_name", targetName) + ",";
