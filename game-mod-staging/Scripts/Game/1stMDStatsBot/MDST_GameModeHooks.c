@@ -53,11 +53,14 @@ modded class SCR_BaseGameMode
 		IEntity sourceEntity = killer.GetInstigatorEntity();
 		string weaponId = MDST_WeaponMetadata.GetWeaponIdForPlayer(killerPlayerId, sourceEntity);
 		string weaponName = MDST_WeaponMetadata.GetWeaponNameForPlayer(killerPlayerId, sourceEntity);
+		float distanceMeters = MDST_GetCombatDistance(playerEntity, killerEntity);
+		if (distanceMeters <= 0 && sourceEntity)
+			distanceMeters = MDST_GetCombatDistance(playerEntity, sourceEntity);
 
 		if (killerPlayerId > 0 && killerPlayerId != playerId)
 		{
-			Print(string.Format("[1stMD Stats] Player kill detected killer=%1 victim=%2 weapon=%3 source=%4", killerPlayerId, playerId, weaponName, sourceEntity), LogLevel.NORMAL);
-			stats.SendPlayerKill(killerPlayerId, weaponId, weaponName);
+			Print(string.Format("[1stMD Stats] Player kill detected killer=%1 victim=%2 distance=%3 weapon=%4 source=%5", killerPlayerId, playerId, distanceMeters, weaponName, sourceEntity), LogLevel.NORMAL);
+			stats.SendPlayerKillWithTarget(killerPlayerId, playerId, weaponId, weaponName, distanceMeters);
 
 			if (MDST_WeaponMetadata.IsPlayerInVehicle(killerPlayerId))
 			{
@@ -70,8 +73,7 @@ modded class SCR_BaseGameMode
 
 		if (killerPlayerId > 0 && killerPlayerId == playerId)
 		{
-			Print(string.Format("[1stMD Stats] Teamkill/self-kill detected player=%1 weapon=%2 source=%3", killerPlayerId, weaponName, sourceEntity), LogLevel.NORMAL);
-			stats.SendTeamkill(killerPlayerId, weaponId, weaponName);
+			Print(string.Format("[1stMD Stats] Self-kill detected player=%1 weapon=%2 source=%3", killerPlayerId, weaponName, sourceEntity), LogLevel.NORMAL);
 		}
 
 		return handled;
@@ -109,6 +111,13 @@ modded class SCR_BaseGameMode
 		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
 		if (stats)
 			stats.SendPlayerKill(playerId, weaponId, weaponName, distanceMeters);
+	}
+
+	void MDST_RecordPlayerKillWithTarget(int playerId, int targetPlayerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendPlayerKillWithTarget(playerId, targetPlayerId, weaponId, weaponName, distanceMeters);
 	}
 
 	void MDST_RecordAIKill(int playerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
@@ -324,5 +333,13 @@ modded class SCR_BaseGameMode
 			return;
 
 		stats.SendSessionStart(playerId);
+	}
+
+	protected float MDST_GetCombatDistance(IEntity victimEntity, IEntity killerEntity)
+	{
+		if (!victimEntity || !killerEntity)
+			return 0;
+
+		return vector.Distance(victimEntity.GetOrigin(), killerEntity.GetOrigin());
 	}
 }

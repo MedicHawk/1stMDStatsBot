@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const statsService = require('./statsService');
 
 let publishedMessagesTableReady = false;
+let serverFeatureColumnsReady = false;
 
 function generateApiKey() {
   return crypto.randomBytes(24).toString('hex');
@@ -30,10 +31,40 @@ async function ensurePublishedMessagesTable() {
   publishedMessagesTableReady = true;
 }
 
+async function ensureServerFeatureColumns() {
+  if (serverFeatureColumnsReady) {
+    return;
+  }
+
+  const requiredColumns = [
+    ['kill_feed_channel_id', 'kill_feed_channel_id VARCHAR(32) NULL'],
+    ['kill_feed_enabled', 'kill_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE']
+  ];
+
+  for (const [columnName, definition] of requiredColumns) {
+    const [rows] = await pool.execute(
+      `SELECT COUNT(*) AS count
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'servers'
+         AND COLUMN_NAME = :columnName`,
+      { columnName }
+    );
+
+    if (Number(rows[0].count) === 0) {
+      await pool.execute(`ALTER TABLE servers ADD COLUMN ${definition}`);
+    }
+  }
+
+  serverFeatureColumnsReady = true;
+}
+
 async function listServers({ enabledOnly = false } = {}) {
+  await ensureServerFeatureColumns();
   const [rows] = await pool.execute(
     `SELECT s.server_id, s.name, c.slug AS category, s.battlemetrics_id, s.enabled,
-            s.status_channel_id, s.leaderboard_channel_id, s.current_status,
+            s.status_channel_id, s.leaderboard_channel_id, s.kill_feed_channel_id,
+            s.kill_feed_enabled, s.current_status,
             s.current_player_count, s.max_player_slots, s.current_map,
             s.uptime_seconds, s.battlemetrics_rank, s.last_heartbeat_at
      FROM servers s
@@ -86,6 +117,7 @@ async function removeCategory(slug) {
 }
 
 async function addServer(input) {
+  await ensureServerFeatureColumns();
   const apiKeyHash = await bcrypt.hash(input.apiKey, 12);
   const [result] = await pool.execute(
     `INSERT INTO servers
@@ -212,6 +244,32 @@ async function setLeaderboardChannel(serverId, channelId) {
   }
 }
 
+async function setKillFeedChannel(serverId, channelId) {
+  await ensureServerFeatureColumns();
+  const [result] = await pool.execute(
+    'UPDATE servers SET kill_feed_channel_id = :channelId WHERE server_id = :serverId',
+    { serverId, channelId }
+  );
+  if (result.affectedRows === 0) {
+    const error = new Error('Server not found');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
+async function setKillFeedEnabled(serverId, enabled) {
+  await ensureServerFeatureColumns();
+  const [result] = await pool.execute(
+    'UPDATE servers SET kill_feed_enabled = :enabled WHERE server_id = :serverId',
+    { serverId, enabled }
+  );
+  if (result.affectedRows === 0) {
+    const error = new Error('Server not found');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
 async function recordHeartbeat(server, payload) {
   await pool.execute(
     `UPDATE servers
@@ -314,6 +372,7 @@ async function audit({ actorDiscordId, action, targetType, targetId, details }) 
 
 module.exports = {
   listServers,
+  ensureServerFeatureColumns,
   ensurePublishedMessagesTable,
   getPublishedMessage,
   setPublishedMessage,
@@ -329,6 +388,8 @@ module.exports = {
   setServerCategory,
   setStatusChannel,
   setLeaderboardChannel,
+  setKillFeedChannel,
+  setKillFeedEnabled,
   recordHeartbeat,
   updatePublicStatus,
   replaceMods,

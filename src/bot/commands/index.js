@@ -17,5 +17,6 @@ module.exports = [
   require('./admin/adminUnlink'),
   require('./admin/statsAdjust'),
   require('./admin/statusChannel'),
-  require('./admin/leaderboardChannel')
+  require('./admin/leaderboardChannel'),
+  require('./admin/killFeed')
 ];

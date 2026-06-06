@@ -281,9 +281,54 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void SendCombatEventWithTarget(int playerId, string eventType, int targetPlayerId, string targetType = "player", string weaponId = "", string weaponName = "", float distanceMeters = 0, int shotsFired = 0, int hits = 0)
+	{
+		if (!IsStatsReady())
+			return;
+
+		MDST_PlayerIdentity identity = m_IdentityService.Resolve(playerId);
+		if (!identity || !identity.IsValid())
+			return;
+
+		string targetStableId = "";
+		string targetName = "";
+		if (targetPlayerId > 0)
+		{
+			MDST_PlayerIdentity targetIdentity = m_IdentityService.Resolve(targetPlayerId);
+			if (targetIdentity && targetIdentity.IsValid())
+			{
+				targetStableId = targetIdentity.m_sStableId;
+				targetName = targetIdentity.m_sDisplayName;
+			}
+		}
+
+		string json = "{" +
+			MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + "," +
+			MDST_Json.PairString("player_name", identity.m_sDisplayName) + "," +
+			MDST_Json.PairString("event_type", eventType) + "," +
+			MDST_Json.PairString("target_reforger_id", targetStableId) + "," +
+			MDST_Json.PairString("target_name", targetName) + "," +
+			MDST_Json.PairString("target_type", targetType) + "," +
+			MDST_Json.PairString("weapon_id", weaponId) + "," +
+			MDST_Json.PairString("weapon_name", weaponName) + "," +
+			MDST_Json.PairFloat("distance_meters", distanceMeters) + "," +
+			MDST_Json.PairInt("shots_fired", shotsFired) + "," +
+			MDST_Json.PairInt("hits", hits) +
+		"}";
+
+		m_RestClient.Post("api/ingest/combat", json);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void SendPlayerKill(int playerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
 	{
 		SendCombatEvent(playerId, "kill", weaponId, weaponName, distanceMeters);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendPlayerKillWithTarget(int playerId, int targetPlayerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
+	{
+		SendCombatEventWithTarget(playerId, "kill", targetPlayerId, "player", weaponId, weaponName, distanceMeters);
 	}
 
 	//------------------------------------------------------------------------------------------------

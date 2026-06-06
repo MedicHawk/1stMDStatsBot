@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const killFeedService = require('./killFeedService');
 
 const ADJUSTABLE_PLAYER_STATS = new Set([
   'player_kills',
@@ -68,6 +69,8 @@ async function closeOpenSessionsForPlayer(connection, serverId, playerId) {
 }
 
 async function recordCombatEvent(server, season, payload) {
+  await killFeedService.ensureKillFeedTable();
+
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
     const increments = {
       kill: 'player_kills',
@@ -119,6 +122,8 @@ async function recordCombatEvent(server, season, payload) {
         }
       );
     }
+
+    await killFeedService.recordKillFeedEvent(connection, server, player, payload);
   });
 }
 

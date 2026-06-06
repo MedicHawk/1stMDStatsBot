@@ -1,4 +1,5 @@
 const battlemetricsService = require('../../services/battlemetricsService');
+const killFeedService = require('../../services/killFeedService');
 const leaderboardService = require('../../services/leaderboardService');
 const serverService = require('../../services/serverService');
 const logger = require('../../utils/logger');
@@ -8,6 +9,7 @@ const serverEmbed = require('../embeds/serverEmbed');
 const MIN_INTERVAL_MS = 60 * 1000;
 const DEFAULT_STATUS_INTERVAL_MINUTES = 5;
 const DEFAULT_LEADERBOARD_INTERVAL_MINUTES = 15;
+const DEFAULT_KILL_FEED_INTERVAL_SECONDS = 10;
 const DEFAULT_LEADERBOARD_TYPES = ['kills', 'aikills', 'hours'];
 const DEFAULT_STATUS_OFFLINE_AFTER_MINUTES = 5;
 const ONLINE_INDICATOR = '\u{1F7E2}';
@@ -19,6 +21,14 @@ function minutesToMs(value, fallback) {
     return fallback * 60 * 1000;
   }
   return Math.max(Math.round(parsed * 60 * 1000), MIN_INTERVAL_MS);
+}
+
+function secondsToMs(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback * 1000;
+  }
+  return Math.max(Math.round(parsed * 1000), 5000);
 }
 
 function leaderboardTypes() {
@@ -266,6 +276,43 @@ async function publishLeaderboards(client) {
   }
 }
 
+async function publishKillFeed(client) {
+  if (!isEnabled(process.env.DISCORD_KILL_FEED_ENABLED)) {
+    return;
+  }
+
+  await serverService.ensureServerFeatureColumns();
+  const events = await killFeedService.listPendingKillFeedEvents(25);
+  for (const event of events) {
+    const channel = await fetchTextChannel(client, event.kill_feed_channel_id);
+    if (!channel) {
+      continue;
+    }
+
+    const message = await channel.send({ embeds: [killFeedService.buildKillFeedEmbed(event)] }).catch((error) => {
+      logger.warn({
+        event_id: event.id,
+        server_id: event.server_id,
+        channel_id: event.kill_feed_channel_id,
+        error
+      }, 'Failed to send kill feed event');
+      return null;
+    });
+
+    if (!message) {
+      continue;
+    }
+
+    await killFeedService.markKillFeedEventPosted(event.id);
+    logger.info({
+      event_id: event.id,
+      server_id: event.server_id,
+      channel_id: event.kill_feed_channel_id,
+      message_id: message.id
+    }, 'Published kill feed event');
+  }
+}
+
 function schedulePublisher(name, intervalMs, publisher) {
   let running = false;
 
@@ -297,16 +344,20 @@ function startAutoPublisher(client) {
 
   const statusIntervalMs = minutesToMs(process.env.DISCORD_STATUS_POST_MINUTES, DEFAULT_STATUS_INTERVAL_MINUTES);
   const leaderboardIntervalMs = minutesToMs(process.env.DISCORD_LEADERBOARD_POST_MINUTES, DEFAULT_LEADERBOARD_INTERVAL_MINUTES);
+  const killFeedIntervalMs = secondsToMs(process.env.DISCORD_KILL_FEED_POST_SECONDS, DEFAULT_KILL_FEED_INTERVAL_SECONDS);
 
   schedulePublisher('status', statusIntervalMs, () => publishStatus(client));
   schedulePublisher('leaderboards', leaderboardIntervalMs, () => publishLeaderboards(client));
+  schedulePublisher('kill-feed', killFeedIntervalMs, () => publishKillFeed(client));
 
   logger.info({
     status_minutes: statusIntervalMs / 60000,
     leaderboard_minutes: leaderboardIntervalMs / 60000,
+    kill_feed_seconds: killFeedIntervalMs / 1000,
     leaderboard_types: leaderboardTypes(),
     status_rename_enabled: isEnabled(process.env.DISCORD_STATUS_RENAME_ENABLED),
-    status_presence_enabled: isEnabled(process.env.DISCORD_STATUS_PRESENCE_ENABLED)
+    status_presence_enabled: isEnabled(process.env.DISCORD_STATUS_PRESENCE_ENABLED),
+    kill_feed_enabled: isEnabled(process.env.DISCORD_KILL_FEED_ENABLED)
   }, 'Discord auto-publisher started');
 }
 
@@ -314,6 +365,7 @@ module.exports = {
   startAutoPublisher,
   publishStatus,
   publishLeaderboards,
+  publishKillFeed,
   buildStatusChannelName,
   buildPresenceText,
   upsertPublishedMessage

@@ -6,11 +6,13 @@ const SERVER_DATA_TABLES = [
   'matches',
   'player_stats',
   'weapon_stats',
+  'kill_feed_events',
   'vehicle_stats',
   'movement_stats',
   'objective_stats',
   'medical_stats',
   'leaderboard_cache',
+  'discord_published_messages',
   'servers'
 ];
 

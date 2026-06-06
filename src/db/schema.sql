@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS servers (
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   status_channel_id VARCHAR(32) NULL,
   leaderboard_channel_id VARCHAR(32) NULL,
+  kill_feed_channel_id VARCHAR(32) NULL,
+  kill_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   current_status ENUM('online', 'offline', 'unknown') NOT NULL DEFAULT 'unknown',
   current_player_count INT UNSIGNED NOT NULL DEFAULT 0,
   max_player_slots INT UNSIGNED NULL,
@@ -155,6 +157,26 @@ CREATE TABLE IF NOT EXISTS weapon_stats (
   CONSTRAINT fk_weapon_server FOREIGN KEY (server_id) REFERENCES servers(id),
   CONSTRAINT fk_weapon_player FOREIGN KEY (player_id) REFERENCES players(id),
   CONSTRAINT fk_weapon_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+);
+
+CREATE TABLE IF NOT EXISTS kill_feed_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  server_id BIGINT UNSIGNED NOT NULL,
+  player_id BIGINT UNSIGNED NOT NULL,
+  event_type VARCHAR(32) NOT NULL,
+  player_name VARCHAR(120) NULL,
+  target_reforger_id VARCHAR(128) NULL,
+  target_name VARCHAR(120) NULL,
+  target_type VARCHAR(32) NULL,
+  weapon_id VARCHAR(128) NULL,
+  weapon_name VARCHAR(160) NULL,
+  distance_meters DECIMAL(8,2) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  posted_at TIMESTAMP NULL,
+  INDEX idx_kill_feed_pending (posted_at, created_at),
+  INDEX idx_kill_feed_server_created (server_id, created_at),
+  CONSTRAINT fk_kill_feed_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_kill_feed_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS vehicle_stats (
