@@ -59,10 +59,19 @@ modded class SCR_BaseGameMode
 
 		if (killerPlayerId > 0 && killerPlayerId != playerId)
 		{
-			Print(string.Format("[1stMD Stats] Player kill detected killer=%1 victim=%2 distance=%3 weapon=%4 source=%5", killerPlayerId, playerId, distanceMeters, weaponName, sourceEntity), LogLevel.NORMAL);
-			stats.SendPlayerKillWithTarget(killerPlayerId, playerId, weaponId, weaponName, distanceMeters);
+			bool isTeamkill = MDST_IsTeamkill(playerEntity, killerEntity, playerId, killerPlayerId);
+			if (isTeamkill)
+			{
+				Print(string.Format("[1stMD Stats] Teamkill detected killer=%1 victim=%2 distance=%3 weapon=%4 source=%5", killerPlayerId, playerId, distanceMeters, weaponName, sourceEntity), LogLevel.NORMAL);
+				stats.SendTeamkillWithTarget(killerPlayerId, playerId, weaponId, weaponName, distanceMeters);
+			}
+			else
+			{
+				Print(string.Format("[1stMD Stats] Player kill detected killer=%1 victim=%2 distance=%3 weapon=%4 source=%5", killerPlayerId, playerId, distanceMeters, weaponName, sourceEntity), LogLevel.NORMAL);
+				stats.SendPlayerKillWithTarget(killerPlayerId, playerId, weaponId, weaponName, distanceMeters);
+			}
 
-			if (MDST_WeaponMetadata.IsPlayerInVehicle(killerPlayerId))
+			if (!isTeamkill && MDST_WeaponMetadata.IsPlayerInVehicle(killerPlayerId))
 			{
 				string vehicleId = MDST_WeaponMetadata.GetVehicleIdForPlayer(killerPlayerId);
 				string vehicleName = MDST_WeaponMetadata.GetVehicleNameForPlayer(killerPlayerId);
@@ -146,6 +155,13 @@ modded class SCR_BaseGameMode
 		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
 		if (stats)
 			stats.SendTeamkill(playerId, weaponId, weaponName, distanceMeters);
+	}
+
+	void MDST_RecordTeamkillWithTarget(int playerId, int targetPlayerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendTeamkillWithTarget(playerId, targetPlayerId, weaponId, weaponName, distanceMeters);
 	}
 
 	void MDST_RecordAssist(int playerId, string weaponId = "", string weaponName = "")
@@ -341,5 +357,34 @@ modded class SCR_BaseGameMode
 			return 0;
 
 		return vector.Distance(victimEntity.GetOrigin(), killerEntity.GetOrigin());
+	}
+
+	protected bool MDST_IsTeamkill(IEntity victimEntity, IEntity killerEntity, int victimPlayerId, int killerPlayerId)
+	{
+		if (victimPlayerId <= 0 || killerPlayerId <= 0 || victimPlayerId == killerPlayerId)
+			return false;
+
+		IEntity resolvedKillerEntity = killerEntity;
+		if (!resolvedKillerEntity)
+		{
+			PlayerManager playerManager = GetGame().GetPlayerManager();
+			if (playerManager)
+				resolvedKillerEntity = playerManager.GetPlayerControlledEntity(killerPlayerId);
+		}
+
+		if (!victimEntity || !resolvedKillerEntity)
+			return false;
+
+		FactionAffiliationComponent victimFaction = FactionAffiliationComponent.Cast(victimEntity.FindComponent(FactionAffiliationComponent));
+		FactionAffiliationComponent killerFaction = FactionAffiliationComponent.Cast(resolvedKillerEntity.FindComponent(FactionAffiliationComponent));
+		if (!victimFaction || !killerFaction)
+			return false;
+
+		Faction victimSide = victimFaction.GetAffiliatedFaction();
+		Faction killerSide = killerFaction.GetAffiliatedFaction();
+		if (!victimSide || !killerSide)
+			return false;
+
+		return victimSide == killerSide;
 	}
 }

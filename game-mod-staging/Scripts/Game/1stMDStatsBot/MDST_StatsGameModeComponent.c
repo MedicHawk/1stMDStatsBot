@@ -377,6 +377,12 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void SendTeamkillWithTarget(int playerId, int targetPlayerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
+	{
+		SendCombatEventWithTarget(playerId, "teamkill", targetPlayerId, "player", weaponId, weaponName, distanceMeters);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void SendAssist(int playerId, string weaponId = "", string weaponName = "")
 	{
 		SendCombatEvent(playerId, "assist", weaponId, weaponName);
