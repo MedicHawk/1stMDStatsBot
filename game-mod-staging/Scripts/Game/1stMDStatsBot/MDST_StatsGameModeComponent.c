@@ -266,16 +266,16 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 		if (!identity || !identity.IsValid())
 			return;
 
-		string json = "{" +
-			MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + "," +
-			MDST_Json.PairString("player_name", identity.m_sDisplayName) + "," +
-			MDST_Json.PairString("event_type", eventType) + "," +
-			MDST_Json.PairString("weapon_id", weaponId) + "," +
-			MDST_Json.PairString("weapon_name", weaponName) + "," +
-			MDST_Json.PairFloat("distance_meters", distanceMeters) + "," +
-			MDST_Json.PairInt("shots_fired", shotsFired) + "," +
-			MDST_Json.PairInt("hits", hits) +
-		"}";
+		string json = "{";
+		json += MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + ",";
+		json += MDST_Json.PairString("player_name", identity.m_sDisplayName) + ",";
+		json += MDST_Json.PairString("event_type", eventType) + ",";
+		json += MDST_Json.PairString("weapon_id", weaponId) + ",";
+		json += MDST_Json.PairString("weapon_name", weaponName) + ",";
+		json += MDST_Json.PairFloat("distance_meters", distanceMeters) + ",";
+		json += MDST_Json.PairInt("shots_fired", shotsFired) + ",";
+		json += MDST_Json.PairInt("hits", hits);
+		json += "}";
 
 		m_RestClient.Post("api/ingest/combat", json);
 	}
@@ -302,19 +302,19 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 			}
 		}
 
-		string json = "{" +
-			MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + "," +
-			MDST_Json.PairString("player_name", identity.m_sDisplayName) + "," +
-			MDST_Json.PairString("event_type", eventType) + "," +
-			MDST_Json.PairString("target_reforger_id", targetStableId) + "," +
-			MDST_Json.PairString("target_name", targetName) + "," +
-			MDST_Json.PairString("target_type", targetType) + "," +
-			MDST_Json.PairString("weapon_id", weaponId) + "," +
-			MDST_Json.PairString("weapon_name", weaponName) + "," +
-			MDST_Json.PairFloat("distance_meters", distanceMeters) + "," +
-			MDST_Json.PairInt("shots_fired", shotsFired) + "," +
-			MDST_Json.PairInt("hits", hits) +
-		"}";
+		string json = "{";
+		json += MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + ",";
+		json += MDST_Json.PairString("player_name", identity.m_sDisplayName) + ",";
+		json += MDST_Json.PairString("event_type", eventType) + ",";
+		json += MDST_Json.PairString("target_reforger_id", targetStableId) + ",";
+		json += MDST_Json.PairString("target_name", targetName) + ",";
+		json += MDST_Json.PairString("target_type", targetType) + ",";
+		json += MDST_Json.PairString("weapon_id", weaponId) + ",";
+		json += MDST_Json.PairString("weapon_name", weaponName) + ",";
+		json += MDST_Json.PairFloat("distance_meters", distanceMeters) + ",";
+		json += MDST_Json.PairInt("shots_fired", shotsFired) + ",";
+		json += MDST_Json.PairInt("hits", hits);
+		json += "}";
 
 		m_RestClient.Post("api/ingest/combat", json);
 	}
