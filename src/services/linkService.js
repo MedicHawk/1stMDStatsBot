@@ -30,7 +30,7 @@ async function verifyInGameCode({ code, player_reforger_id, player_name }) {
   const normalizedCode = String(code || '').trim().toUpperCase();
   const [rows] = await pool.execute(
     `SELECT * FROM link_codes
-     WHERE used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+     WHERE used_at IS NULL AND expires_at > UTC_TIMESTAMP()
      ORDER BY created_at DESC
      LIMIT 25`
   );
@@ -83,6 +83,22 @@ async function verifyInGameCode({ code, player_reforger_id, player_name }) {
   } finally {
     connection.release();
   }
+}
+
+async function getLinkDiagnostics(discordUserId = null) {
+  const [rows] = await pool.execute(
+    `SELECT
+       COUNT(*) AS total_unused,
+       SUM(CASE WHEN expires_at > UTC_TIMESTAMP() THEN 1 ELSE 0 END) AS active_unused,
+       MAX(created_at) AS newest_created_at,
+       MAX(expires_at) AS newest_expires_at,
+       UTC_TIMESTAMP() AS db_utc_now
+     FROM link_codes
+     WHERE used_at IS NULL
+       AND (:discordUserId IS NULL OR discord_user_id = :discordUserId)`,
+    { discordUserId }
+  );
+  return rows[0] || null;
 }
 
 async function unlinkDiscordUser(discordUserId) {
@@ -149,6 +165,7 @@ async function getProfileByDiscordId(discordUserId) {
 module.exports = {
   createLinkCode,
   verifyInGameCode,
+  getLinkDiagnostics,
   unlinkDiscordUser,
   getProfileByDiscordId
 };

@@ -20,6 +20,10 @@ module.exports = {
       .setDescription('Unlink a Discord user from their Reforger account.')
       .addUserOption((option) => option.setName('user').setDescription('Discord user').setRequired(true)))
     .addSubcommand((sub) => sub
+      .setName('link-status')
+      .setDescription('Show pending link-code diagnostics for a Discord user.')
+      .addUserOption((option) => option.setName('user').setDescription('Discord user').setRequired(false)))
+    .addSubcommand((sub) => sub
       .setName('reset-all')
       .setDescription('Delete all configured servers and tracked stats.')
       .addStringOption((option) => option
@@ -70,6 +74,23 @@ module.exports = {
       const user = interaction.options.getUser('user');
       await linkService.unlinkDiscordUser(user.id);
       await interaction.reply({ content: `Unlinked ${user.tag}.`, ephemeral: true });
+      return;
+    }
+
+    if (subcommand === 'link-status') {
+      const user = interaction.options.getUser('user') || interaction.user;
+      const diagnostics = await linkService.getLinkDiagnostics(user.id);
+      await interaction.reply({
+        content: [
+          `Link status for ${user.tag}:`,
+          `unused codes: ${diagnostics.total_unused || 0}`,
+          `active unused codes: ${diagnostics.active_unused || 0}`,
+          `newest created: ${diagnostics.newest_created_at || 'none'}`,
+          `newest expires: ${diagnostics.newest_expires_at || 'none'}`,
+          `database UTC now: ${diagnostics.db_utc_now || 'unknown'}`
+        ].join('\n'),
+        ephemeral: true
+      });
       return;
     }
 
