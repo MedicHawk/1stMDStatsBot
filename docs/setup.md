@@ -23,6 +23,16 @@ Speak as the bot:
 
 Mentions are suppressed by default. Set `allow_mentions: true` when you intentionally want the bot message to ping users or roles.
 
+Session and leaderboard diagnostics:
+
+```text
+/admin open-sessions
+/admin close-stale-sessions confirm: CLOSE older_than_minutes: 60
+/admin refresh-leaderboards
+```
+
+Use these to inspect active playtime sessions, clean stale open sessions, and manually refresh cached leaderboard payloads.
+
 Generate a fresh server API key:
 
 ```text

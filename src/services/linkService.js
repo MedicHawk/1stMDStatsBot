@@ -94,13 +94,51 @@ async function unlinkDiscordUser(discordUserId) {
 
 async function getProfileByDiscordId(discordUserId) {
   const [rows] = await pool.execute(
-    `SELECT p.*, ps.player_kills, ps.ai_kills, ps.deaths, ms.revives,
-            mv.distance_foot_meters, mv.distance_vehicle_meters
+    `SELECT p.*,
+            COALESCE(ps.player_kills, 0) AS player_kills,
+            COALESCE(ps.ai_kills, 0) AS ai_kills,
+            COALESCE(ps.deaths, 0) AS deaths,
+            COALESCE(ps.teamkills, 0) AS teamkills,
+            COALESCE(ps.assists, 0) AS assists,
+            COALESCE(ms.revives, 0) AS revives,
+            COALESCE(mv.distance_foot_meters, 0) AS distance_foot_meters,
+            COALESCE(mv.distance_vehicle_meters, 0) AS distance_vehicle_meters,
+            COALESCE(sess.value_seconds, 0) AS playtime_seconds
      FROM account_links al
      JOIN players p ON p.id = al.player_id
-     LEFT JOIN player_stats ps ON ps.player_id = p.id AND ps.season_id IS NULL
-     LEFT JOIN medical_stats ms ON ms.player_id = p.id AND ms.season_id IS NULL
-     LEFT JOIN movement_stats mv ON mv.player_id = p.id AND mv.season_id IS NULL
+     LEFT JOIN (
+       SELECT player_id,
+              SUM(player_kills) AS player_kills,
+              SUM(ai_kills) AS ai_kills,
+              SUM(deaths) AS deaths,
+              SUM(teamkills) AS teamkills,
+              SUM(assists) AS assists
+       FROM player_stats
+       GROUP BY player_id
+     ) ps ON ps.player_id = p.id
+     LEFT JOIN (
+       SELECT player_id, SUM(revives) AS revives
+       FROM medical_stats
+       GROUP BY player_id
+     ) ms ON ms.player_id = p.id
+     LEFT JOIN (
+       SELECT player_id,
+              SUM(distance_foot_meters) AS distance_foot_meters,
+              SUM(distance_vehicle_meters) AS distance_vehicle_meters
+       FROM movement_stats
+       GROUP BY player_id
+     ) mv ON mv.player_id = p.id
+     LEFT JOIN (
+       SELECT player_id,
+              SUM(
+                CASE
+                  WHEN ended_at IS NULL THEN TIMESTAMPDIFF(SECOND, started_at, CURRENT_TIMESTAMP)
+                  ELSE duration_seconds
+                END
+              ) AS value_seconds
+       FROM player_sessions
+       GROUP BY player_id
+     ) sess ON sess.player_id = p.id
      WHERE al.discord_user_id = :discordUserId AND al.unlinked_at IS NULL
      LIMIT 1`,
     { discordUserId }

@@ -10,6 +10,11 @@ const ADJUSTABLE_PLAYER_STATS = new Set([
   'hits'
 ]);
 
+function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 async function ensurePlayer(connection, payload) {
   await connection.execute(
     `INSERT INTO players (reforger_player_id, display_name, first_seen, last_seen)
@@ -282,6 +287,39 @@ async function closeOpenServerSessions(server) {
   );
 }
 
+async function listOpenSessions({ serverId = null, limit = 15 } = {}) {
+  const rowLimit = parsePositiveInt(limit, 15);
+  const [rows] = await pool.execute(
+    `SELECT s.server_id, s.name AS server_name, p.display_name, p.reforger_player_id,
+            sess.started_at,
+            TIMESTAMPDIFF(SECOND, sess.started_at, CURRENT_TIMESTAMP) AS elapsed_seconds
+     FROM player_sessions sess
+     JOIN servers s ON s.id = sess.server_id
+     JOIN players p ON p.id = sess.player_id
+     WHERE sess.ended_at IS NULL
+       AND (:serverId IS NULL OR s.server_id = :serverId)
+     ORDER BY sess.started_at ASC
+     LIMIT ${rowLimit}`,
+    { serverId }
+  );
+  return rows;
+}
+
+async function closeStaleOpenSessions({ serverId = null, olderThanMinutes = 60 } = {}) {
+  const minutes = parsePositiveInt(olderThanMinutes, 60);
+  const [result] = await pool.execute(
+    `UPDATE player_sessions sess
+     JOIN servers s ON s.id = sess.server_id
+     SET sess.ended_at = CURRENT_TIMESTAMP,
+         sess.duration_seconds = 0
+     WHERE sess.ended_at IS NULL
+       AND sess.started_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL :minutes MINUTE)
+       AND (:serverId IS NULL OR s.server_id = :serverId)`,
+    { minutes, serverId }
+  );
+  return result.affectedRows || 0;
+}
+
 async function endMatch(server, payload) {
   if (!payload.external_match_id) {
     await pool.execute(
@@ -372,5 +410,7 @@ module.exports = {
   startMatch,
   endMatch,
   closeOpenServerSessions,
+  listOpenSessions,
+  closeStaleOpenSessions,
   adjustPlayerStat
 };
