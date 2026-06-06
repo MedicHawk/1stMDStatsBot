@@ -5,6 +5,7 @@ const resetService = require('../../../services/resetService');
 const serverService = require('../../../services/serverService');
 const statsService = require('../../../services/statsService');
 const { formatDuration } = require('../../embeds/leaderboardEmbed');
+const { publishStatus } = require('../../services/autoPublisher');
 
 const RESET_CONFIRMATION = 'RESET ALL';
 
@@ -55,7 +56,10 @@ module.exports = {
       .addIntegerOption((option) => option.setName('older_than_minutes').setDescription('Default 60 minutes.').setRequired(false).setMinValue(1).setMaxValue(10080)))
     .addSubcommand((sub) => sub
       .setName('refresh-leaderboards')
-      .setDescription('Refresh cached leaderboard payloads now.')),
+      .setDescription('Refresh cached leaderboard payloads now.'))
+    .addSubcommand((sub) => sub
+      .setName('refresh-status')
+      .setDescription('Refresh status embeds, status channel names, and bot presence now.')),
   async execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
 
@@ -174,6 +178,19 @@ module.exports = {
         details: { count }
       });
       await interaction.editReply({ content: `Refreshed ${count} leaderboard cache payload(s).` });
+      return;
+    }
+
+    if (subcommand === 'refresh-status') {
+      await interaction.deferReply({ ephemeral: true });
+      await publishStatus(interaction.client);
+      await serverService.audit({
+        actorDiscordId: interaction.user.id,
+        action: 'admin.refresh_status',
+        targetType: 'status',
+        targetId: 'all'
+      });
+      await interaction.editReply({ content: 'Refreshed status embeds, channel names, and bot presence.' });
     }
   }
 };

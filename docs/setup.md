@@ -29,9 +29,10 @@ Session and leaderboard diagnostics:
 /admin open-sessions
 /admin close-stale-sessions confirm: CLOSE older_than_minutes: 60
 /admin refresh-leaderboards
+/admin refresh-status
 ```
 
-Use these to inspect active playtime sessions, clean stale open sessions, and manually refresh cached leaderboard payloads.
+Use these to inspect active playtime sessions, clean stale open sessions, manually refresh cached leaderboard payloads, and force status embed/channel/presence updates.
 
 Generate a fresh server API key:
 
