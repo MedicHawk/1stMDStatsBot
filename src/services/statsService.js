@@ -433,6 +433,73 @@ async function recordSupportEvent(server, season, payload) {
   });
 }
 
+async function getPlayerSnapshot(server, season, reforgerPlayerId) {
+  await ensureSupportSchema();
+  const seasonId = season ? season.id : null;
+  const [[player]] = await pool.execute(
+    'SELECT id, reforger_player_id, display_name FROM players WHERE reforger_player_id = :reforgerPlayerId LIMIT 1',
+    { reforgerPlayerId }
+  );
+
+  if (!player) {
+    return {
+      player_kills: 0,
+      ai_kills: 0,
+      deaths: 0,
+      kd: '0.00',
+      rank: null,
+      xp: 0
+    };
+  }
+
+  const [[stats]] = await pool.execute(
+    `SELECT COALESCE(SUM(player_kills), 0) AS player_kills,
+            COALESCE(SUM(ai_kills), 0) AS ai_kills,
+            COALESCE(SUM(deaths), 0) AS deaths
+     FROM player_stats
+     WHERE server_id = :serverId
+       AND player_id = :playerId
+       AND (:seasonId IS NULL OR season_id = :seasonId)`,
+    { serverId: server.id, playerId: player.id, seasonId }
+  );
+
+  const [[xpRow]] = await pool.execute(
+    `SELECT COALESCE(SUM(xp), 0) AS xp
+     FROM player_xp
+     WHERE server_id = :serverId
+       AND player_id = :playerId
+       AND (:seasonId IS NULL OR season_id = :seasonId)`,
+    { serverId: server.id, playerId: player.id, seasonId }
+  );
+
+  const xp = Number(xpRow.xp || 0);
+  const [[rankRow]] = await pool.execute(
+    `SELECT COUNT(*) + 1 AS rank
+     FROM (
+       SELECT player_id, SUM(xp) AS total_xp
+       FROM player_xp
+       WHERE server_id = :serverId
+         AND (:seasonId IS NULL OR season_id = :seasonId)
+       GROUP BY player_id
+       HAVING total_xp > :xp
+     ) ranked`,
+    { serverId: server.id, seasonId, xp }
+  );
+
+  const kills = Number(stats.player_kills || 0);
+  const deaths = Number(stats.deaths || 0);
+  const kd = deaths > 0 ? (kills / deaths).toFixed(2) : kills > 0 ? 'Perfect' : '0.00';
+
+  return {
+    player_kills: kills,
+    ai_kills: Number(stats.ai_kills || 0),
+    deaths,
+    kd,
+    rank: Number(rankRow.rank || 1),
+    xp
+  };
+}
+
 async function startSession(server, season, payload) {
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
     await closeOpenSessionsForPlayer(connection, server.id, player.id);
@@ -616,6 +683,7 @@ module.exports = {
   recordMovementUpdate,
   recordObjectiveEvent,
   recordSupportEvent,
+  getPlayerSnapshot,
   startSession,
   endSession,
   startMatch,

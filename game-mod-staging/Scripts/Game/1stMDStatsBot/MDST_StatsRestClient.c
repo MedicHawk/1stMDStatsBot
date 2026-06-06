@@ -29,6 +29,27 @@ class MDST_StatsRestCallback : RestCallback
 	}
 }
 
+class MDST_KillToastRestCallback : MDST_StatsRestCallback
+{
+	protected int m_iPlayerId;
+
+	void MDST_KillToastRestCallback(string endpoint, int playerId)
+	{
+		m_sEndpoint = endpoint;
+		m_iPlayerId = playerId;
+	}
+
+	override void OnSuccess(string data, int dataSize)
+	{
+		super.OnSuccess(data, dataSize);
+
+		if (data.IsEmpty())
+			return;
+
+		SCR_PlayerControllerGroupComponent.MDST_ShowKillToastToPlayer(m_iPlayerId, data);
+	}
+}
+
 class MDST_QueuedRequest
 {
 	string m_sEndpoint;
@@ -155,6 +176,42 @@ class MDST_StatsRestClient
 		m_aCallbacks.Insert(callback);
 
 		Print(string.Format("[1stMD Stats] REST POST dispatch endpoint=%1 bytes=%2 queue_depth=%3", endpoint, json.Length(), m_aQueue.Count()), LogLevel.NORMAL);
+		int result = m_RestContext.POST(callback, authenticatedEndpoint, json);
+		Print(string.Format("[1stMD Stats] REST POST result endpoint=%1 result=%2", endpoint, result), LogLevel.NORMAL);
+
+		if (result < 0)
+		{
+			m_iDispatchFailedCount++;
+			Print(string.Format("[1stMD Stats] POST dispatch failed endpoint=%1 result=%2", endpoint, result), LogLevel.WARNING);
+			Queue(endpoint, json);
+			return;
+		}
+
+		m_iDispatchedCount++;
+	}
+
+	void PostWithKillToast(string endpoint, string json, int playerId)
+	{
+		if (!IsReady())
+		{
+			Print(string.Format("[1stMD Stats] REST not ready; queueing endpoint=%1 bytes=%2", endpoint, json.Length()), LogLevel.WARNING);
+			Queue(endpoint, json);
+			return;
+		}
+
+		if (json.Length() > 1000000)
+		{
+			m_iOversizedDroppedCount++;
+			m_iDroppedCount++;
+			Print(string.Format("[1stMD Stats] Refusing oversized payload endpoint=%1 bytes=%2", endpoint, json.Length()), LogLevel.ERROR);
+			return;
+		}
+
+		string authenticatedEndpoint = BuildAuthenticatedEndpoint(endpoint);
+		MDST_KillToastRestCallback callback = new MDST_KillToastRestCallback(endpoint, playerId);
+		m_aCallbacks.Insert(callback);
+
+		Print(string.Format("[1stMD Stats] REST POST dispatch endpoint=%1 bytes=%2 queue_depth=%3 toast_player=%4", endpoint, json.Length(), m_aQueue.Count(), playerId), LogLevel.NORMAL);
 		int result = m_RestContext.POST(callback, authenticatedEndpoint, json);
 		Print(string.Format("[1stMD Stats] REST POST result endpoint=%1 result=%2", endpoint, result), LogLevel.NORMAL);
 

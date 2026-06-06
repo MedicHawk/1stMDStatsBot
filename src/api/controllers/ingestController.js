@@ -21,6 +21,25 @@ const VALID_SUPPORT_EVENTS = new Set([
   'deploy_spawn'
 ]);
 
+function wantsSnapshot(body) {
+  return body.include_snapshot === true || body.include_snapshot === 'true' || body.include_snapshot === 1 || body.include_snapshot === '1';
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString('en-US');
+}
+
+function buildKillToastText(eventType, snapshot) {
+  const title = eventType === 'teamkill'
+    ? 'Teamkill'
+    : eventType === 'ai_kill'
+      ? 'AI Kill'
+      : 'Kill Confirmed';
+  const rank = snapshot.rank ? `#${snapshot.rank}` : 'Unranked';
+
+  return `${title}\nK/D ${snapshot.kd} | Rank ${rank} | XP ${formatNumber(snapshot.xp)}`;
+}
+
 function requireEventType(eventType, validEvents) {
   if (validEvents.has(eventType)) return;
   const error = new Error(`Unsupported event_type: ${eventType}`);
@@ -34,6 +53,12 @@ async function combatEvent(req, res, next) {
     requireEventType(req.body.event_type, VALID_COMBAT_EVENTS);
     const season = await seasonService.getCurrentSeason();
     await statsService.recordCombatEvent(req.server, season, req.body);
+    if (wantsSnapshot(req.body)) {
+      const snapshot = await statsService.getPlayerSnapshot(req.server, season, req.body.player_reforger_id);
+      res.type('text/plain').status(202).send(buildKillToastText(req.body.event_type, snapshot));
+      return;
+    }
+
     res.status(202).json({ accepted: true });
   } catch (error) {
     next(error);
