@@ -44,8 +44,12 @@ class MDST_KillToastRestCallback : MDST_StatsRestCallback
 		super.OnSuccess(data, dataSize);
 
 		if (data.IsEmpty())
+		{
+			Print(string.Format("[1stMD Stats] Kill toast snapshot response empty player_id=%1 endpoint=%2 bytes=%3", m_iPlayerId, m_sEndpoint, dataSize), LogLevel.WARNING);
 			return;
+		}
 
+		Print(string.Format("[1stMD Stats] Kill toast snapshot received player_id=%1 bytes=%2 text=%3", m_iPlayerId, dataSize, data), LogLevel.NORMAL);
 		SCR_PlayerControllerGroupComponent.MDST_ShowKillToastToPlayer(m_iPlayerId, data);
 	}
 }

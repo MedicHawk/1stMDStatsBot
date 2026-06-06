@@ -17,6 +17,7 @@ modded class SCR_PlayerControllerGroupComponent
 			return;
 		}
 
+		Print(string.Format("[1stMD Stats] Kill toast targeting player_id=%1 bytes=%2", playerId, text.Length()), LogLevel.NORMAL);
 		groupComponent.MDST_ShowKillToast(text);
 	}
 
@@ -36,7 +37,8 @@ modded class SCR_PlayerControllerGroupComponent
 		if (text.IsEmpty())
 			return;
 
-		Rpc(MDST_RpcShowKillToast, text);
+		Print(string.Format("[1stMD Stats] Kill toast RPC dispatch player_id=%1 bytes=%2", GetPlayerID(), text.Length()), LogLevel.NORMAL);
+		Rpc(MDST_RpcShowKillToast, GetPlayerID(), text);
 	}
 
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
@@ -65,13 +67,26 @@ modded class SCR_PlayerControllerGroupComponent
 		stats.SendLinkCode(playerId, code);
 	}
 
-	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
-	protected void MDST_RpcShowKillToast(string text)
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	protected void MDST_RpcShowKillToast(int targetPlayerId, string text)
 	{
 		if (text.IsEmpty())
 			return;
 
-		SCR_HintManagerComponent.ShowCustomHint(text, "1stMD Stats", 4.0);
+		SCR_PlayerControllerGroupComponent localComponent = SCR_PlayerControllerGroupComponent.GetLocalPlayerControllerGroupComponent();
+		if (!localComponent)
+		{
+			Print(string.Format("[1stMD Stats] Kill toast client skipped; local controller missing target_player_id=%1", targetPlayerId), LogLevel.WARNING);
+			return;
+		}
+
+		int localPlayerId = localComponent.GetPlayerID();
+		if (localPlayerId != targetPlayerId)
+			return;
+
+		bool canShow = SCR_HintManagerComponent.CanShowHints();
+		bool shown = SCR_HintManagerComponent.ShowCustomHint(text, "1stMD Stats", 4.0);
+		Print(string.Format("[1stMD Stats] Kill toast client hint player_id=%1 can_show=%2 shown=%3 bytes=%4", localPlayerId, canShow, shown, text.Length()), LogLevel.NORMAL);
 	}
 
 	protected bool MDST_IsValidLinkCode(string code)
