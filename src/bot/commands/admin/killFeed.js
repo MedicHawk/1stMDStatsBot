@@ -1,34 +1,19 @@
-const { ChannelType, PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
+const { PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
 const serverService = require('../../../services/serverService');
-
-function isSendableChannel(channel) {
-  return channel && channel.isTextBased() && typeof channel.send === 'function';
-}
+const { addSendableTargetOptions, resolveSendableTarget } = require('../../utils/discordTargets');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('killfeed')
     .setDescription('Configure kill feed posting.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addSubcommand((sub) => sub
-      .setName('set')
-      .setDescription('Set a server kill feed channel or forum thread.')
-      .addStringOption((option) => option.setName('server_id').setDescription('Server ID').setRequired(true))
-      .addChannelOption((option) => option
-        .setName('channel')
-        .setDescription('Kill feed text channel or thread')
-        .setRequired(false)
-        .addChannelTypes(
-          ChannelType.GuildText,
-          ChannelType.GuildAnnouncement,
-          ChannelType.PublicThread,
-          ChannelType.PrivateThread,
-          ChannelType.AnnouncementThread
-        ))
-      .addStringOption((option) => option
-        .setName('thread_id')
-        .setDescription('Forum post/thread ID if it does not appear in the picker.')
-        .setRequired(false)))
+    .addSubcommand((sub) => addSendableTargetOptions(
+      sub
+        .setName('set')
+        .setDescription('Set a server kill feed channel or thread.')
+        .addStringOption((option) => option.setName('server_id').setDescription('Server ID').setRequired(true)),
+      'Kill feed'
+    ))
     .addSubcommand((sub) => sub
       .setName('enable')
       .setDescription('Turn on kill feed posting for a server.')
@@ -47,30 +32,21 @@ module.exports = {
 
     try {
       if (subcommand === 'set') {
-        const channel = interaction.options.getChannel('channel');
-        const threadId = interaction.options.getString('thread_id');
-        const channelId = channel?.id || threadId;
-
-        if (!channelId) {
-          await interaction.reply({ content: 'Pick a channel/thread or paste a forum post thread ID.', ephemeral: true });
+        const target = await resolveSendableTarget(interaction);
+        if (target.error) {
+          await interaction.reply({ content: target.error, ephemeral: true });
           return;
         }
 
-        const resolvedChannel = channel || await interaction.client.channels.fetch(channelId).catch(() => null);
-        if (!isSendableChannel(resolvedChannel)) {
-          await interaction.reply({ content: 'That target is not message-sendable. For forums, paste the forum post/thread ID, not the parent forum channel ID.', ephemeral: true });
-          return;
-        }
-
-        await serverService.setKillFeedChannel(serverId, channelId);
+        await serverService.setKillFeedChannel(serverId, target.channelId);
         await serverService.audit({
           actorDiscordId: interaction.user.id,
           action: 'server.killfeed.set',
           targetType: 'server',
           targetId: serverId,
-          details: { channelId }
+          details: { channelId: target.channelId }
         });
-        await interaction.reply({ content: `Kill feed target set to <#${channelId}>. Use \`/killfeed enable\` to turn posting on.`, ephemeral: true });
+        await interaction.reply({ content: `Kill feed target set to <#${target.channelId}>. Use \`/killfeed enable\` to turn posting on.`, ephemeral: true });
         return;
       }
 

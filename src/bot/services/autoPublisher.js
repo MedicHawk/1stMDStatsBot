@@ -1,4 +1,5 @@
 const battlemetricsService = require('../../services/battlemetricsService');
+const { ChannelType } = require('discord.js');
 const killFeedService = require('../../services/killFeedService');
 const leaderboardService = require('../../services/leaderboardService');
 const serverService = require('../../services/serverService');
@@ -130,6 +131,10 @@ async function updateStatusChannelName(channel, server) {
   }
 
   if (!channel || typeof channel.setName !== 'function') {
+    return;
+  }
+
+  if (channel.type !== ChannelType.GuildText) {
     return;
   }
 

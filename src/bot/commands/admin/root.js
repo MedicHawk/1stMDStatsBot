@@ -6,6 +6,7 @@ const serverService = require('../../../services/serverService');
 const statsService = require('../../../services/statsService');
 const { formatDuration } = require('../../embeds/leaderboardEmbed');
 const { publishStatus } = require('../../services/autoPublisher');
+const { addSendableTargetOptions, resolveSendableTarget } = require('../../utils/discordTargets');
 
 const RESET_CONFIRMATION = 'RESET ALL';
 
@@ -28,21 +29,23 @@ module.exports = {
       .addBooleanOption((option) => option
         .setName('keep_accounts')
         .setDescription('Keep linked player/account data while clearing servers and stats.')))
-    .addSubcommand((sub) => sub
-      .setName('say')
-      .setDescription('Send a message as the bot.')
-      .addChannelOption((option) => option
-        .setName('channel')
-        .setDescription('Channel to send the message to.')
-        .setRequired(true))
-      .addStringOption((option) => option
-        .setName('message')
-        .setDescription('Message content.')
-        .setRequired(true)
-        .setMaxLength(2000))
-      .addBooleanOption((option) => option
-        .setName('allow_mentions')
-        .setDescription('Allow user, role, and everyone mentions in the sent message.')))
+    .addSubcommand((sub) => {
+      const withTarget = addSendableTargetOptions(
+        sub
+          .setName('say')
+          .setDescription('Send a message as the bot.'),
+        'Target'
+      );
+      return withTarget
+        .addStringOption((option) => option
+          .setName('message')
+          .setDescription('Message content.')
+          .setRequired(true)
+          .setMaxLength(2000))
+        .addBooleanOption((option) => option
+          .setName('allow_mentions')
+          .setDescription('Allow user, role, and everyone mentions in the sent message.'));
+    })
     .addSubcommand((sub) => sub
       .setName('open-sessions')
       .setDescription('List currently open player sessions.')
@@ -100,16 +103,16 @@ module.exports = {
     }
 
     if (subcommand === 'say') {
-      const channel = interaction.options.getChannel('channel');
+      const target = await resolveSendableTarget(interaction);
       const message = interaction.options.getString('message');
       const allowMentions = interaction.options.getBoolean('allow_mentions') === true;
 
-      if (!channel || !channel.isTextBased() || typeof channel.send !== 'function') {
-        await interaction.reply({ content: 'That channel cannot receive bot messages.', ephemeral: true });
+      if (target.error) {
+        await interaction.reply({ content: target.error, ephemeral: true });
         return;
       }
 
-      await channel.send({
+      await target.channel.send({
         content: message,
         allowedMentions: allowMentions ? undefined : { parse: [] }
       });
@@ -118,14 +121,14 @@ module.exports = {
         actorDiscordId: interaction.user.id,
         action: 'admin.say',
         targetType: 'channel',
-        targetId: channel.id,
+        targetId: target.channelId,
         details: {
           messageLength: message.length,
           allowMentions
         }
       });
 
-      await interaction.reply({ content: `Sent message to ${channel}.`, ephemeral: true });
+      await interaction.reply({ content: `Sent message to <#${target.channelId}>.`, ephemeral: true });
       return;
     }
 
