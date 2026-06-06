@@ -3,9 +3,23 @@ const statsService = require('../../services/statsService');
 const seasonService = require('../../services/seasonService');
 
 const VALID_COMBAT_EVENTS = new Set(['kill', 'ai_kill', 'death', 'teamkill', 'assist', 'weapon_sample']);
-const VALID_MEDICAL_EVENTS = new Set(['revive', 'bandage', 'tourniquet']);
-const VALID_VEHICLE_EVENTS = new Set(['kill', 'death', 'assist', 'destroyed', 'crash', 'travel']);
+const VALID_MEDICAL_EVENTS = new Set(['revive', 'bandage', 'tourniquet', 'heal']);
+const VALID_VEHICLE_EVENTS = new Set(['kill', 'death', 'assist', 'destroyed', 'crash', 'travel', 'repair']);
 const VALID_OBJECTIVE_EVENTS = new Set(['capture', 'defense', 'objective_completed', 'mission_participation', 'pvp_win', 'pvp_loss']);
+const VALID_SUPPORT_EVENTS = new Set([
+  'resupply',
+  'ammo_resupply',
+  'supply_delivery',
+  'repair',
+  'vehicle_repair',
+  'build',
+  'fortification',
+  'transport',
+  'teamwork',
+  'squad_support',
+  'spot',
+  'deploy_spawn'
+]);
 
 function requireEventType(eventType, validEvents) {
   if (validEvents.has(eventType)) return;
@@ -73,6 +87,18 @@ async function objectiveEvent(req, res, next) {
   }
 }
 
+async function supportEvent(req, res, next) {
+  try {
+    requireFields(req.body, ['player_reforger_id', 'event_type']);
+    requireEventType(req.body.event_type, VALID_SUPPORT_EVENTS);
+    const season = await seasonService.getCurrentSeason();
+    await statsService.recordSupportEvent(req.server, season, req.body);
+    res.status(202).json({ accepted: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function smokeTest(req, res, next) {
   try {
     requireFields(req.body, ['player_reforger_id']);
@@ -93,6 +119,7 @@ async function smokeTest(req, res, next) {
       hits: 2
     });
     await statsService.recordMedicalEvent(req.server, season, { ...basePayload, event_type: 'bandage', time_as_medic_seconds: 10 });
+    await statsService.recordMedicalEvent(req.server, season, { ...basePayload, event_type: 'heal', time_as_medic_seconds: 5 });
     await statsService.recordVehicleEvent(req.server, season, {
       ...basePayload,
       event_type: 'travel',
@@ -101,6 +128,7 @@ async function smokeTest(req, res, next) {
       distance_driven_meters: 100,
       time_in_vehicle_seconds: 30
     });
+    await statsService.recordSupportEvent(req.server, season, { ...basePayload, event_type: 'resupply' });
     await statsService.recordObjectiveEvent(req.server, season, { ...basePayload, event_type: 'mission_participation' });
     await statsService.recordObjectiveEvent(req.server, season, { ...basePayload, event_type: 'objective_completed' });
     await statsService.endSession(req.server, basePayload);
@@ -138,6 +166,7 @@ module.exports = {
   vehicleEvent,
   movementUpdate,
   objectiveEvent,
+  supportEvent,
   smokeTest,
   sessionStart,
   sessionEnd

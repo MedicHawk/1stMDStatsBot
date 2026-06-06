@@ -427,6 +427,12 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void SendHeal(int playerId, int timeAsMedicSeconds = 0)
+	{
+		SendMedicalEvent(playerId, "heal", timeAsMedicSeconds);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void SendVehicleEvent(int playerId, string eventType, string vehicleId = "", string vehicleName = "", float distanceDrivenMeters = 0, float distancePassengerMeters = 0, int timeInVehicleSeconds = 0)
 	{
 		if (!IsStatsReady())
@@ -478,6 +484,52 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	void SendVehicleCrash(int playerId, string vehicleId = "", string vehicleName = "")
 	{
 		SendVehicleEvent(playerId, "crash", vehicleId, vehicleName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendVehicleRepair(int playerId, string vehicleId = "", string vehicleName = "")
+	{
+		SendVehicleEvent(playerId, "repair", vehicleId, vehicleName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendSupportEvent(int playerId, string eventType, string targetId = "", string targetName = "", float amount = 0)
+	{
+		if (!IsStatsReady())
+			return;
+
+		MDST_PlayerIdentity identity = m_IdentityService.Resolve(playerId);
+		if (!identity || !identity.IsValid())
+			return;
+
+		string json = "{";
+		json += MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + ",";
+		json += MDST_Json.PairString("player_name", identity.m_sDisplayName) + ",";
+		json += MDST_Json.PairString("event_type", eventType) + ",";
+		json += MDST_Json.PairString("target_id", targetId) + ",";
+		json += MDST_Json.PairString("target_name", targetName) + ",";
+		json += MDST_Json.PairFloat("amount", amount);
+		json += "}";
+
+		m_RestClient.Post("api/ingest/support", json);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendResupply(int playerId, string targetId = "", string targetName = "")
+	{
+		SendSupportEvent(playerId, "resupply", targetId, targetName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendSupplyDelivery(int playerId, string targetId = "", string targetName = "")
+	{
+		SendSupportEvent(playerId, "supply_delivery", targetId, targetName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendTeamworkAction(int playerId, string targetId = "", string targetName = "")
+	{
+		SendSupportEvent(playerId, "teamwork", targetId, targetName);
 	}
 
 	//------------------------------------------------------------------------------------------------

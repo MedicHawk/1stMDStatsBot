@@ -13,6 +13,9 @@ const TABLES = [
   'movement_stats',
   'objective_stats',
   'medical_stats',
+  'support_stats',
+  'player_xp',
+  'xp_events',
   'server_mods',
   'leaderboard_cache',
   'audit_logs'

@@ -192,6 +192,13 @@ modded class SCR_BaseGameMode
 			stats.SendTourniquetUsed(playerId, timeAsMedicSeconds);
 	}
 
+	void MDST_RecordHeal(int playerId, int timeAsMedicSeconds = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendHeal(playerId, timeAsMedicSeconds);
+	}
+
 	void MDST_RecordVehicleKill(int playerId, string vehicleId = "", string vehicleName = "")
 	{
 		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
@@ -225,6 +232,41 @@ modded class SCR_BaseGameMode
 		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
 		if (stats)
 			stats.SendVehicleCrash(playerId, vehicleId, vehicleName);
+	}
+
+	void MDST_RecordVehicleRepair(int playerId, string vehicleId = "", string vehicleName = "")
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendVehicleRepair(playerId, vehicleId, vehicleName);
+	}
+
+	void MDST_RecordSupportEvent(int playerId, string eventType, string targetId = "", string targetName = "", float amount = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendSupportEvent(playerId, eventType, targetId, targetName, amount);
+	}
+
+	void MDST_RecordResupply(int playerId, string targetId = "", string targetName = "")
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendResupply(playerId, targetId, targetName);
+	}
+
+	void MDST_RecordSupplyDelivery(int playerId, string targetId = "", string targetName = "")
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendSupplyDelivery(playerId, targetId, targetName);
+	}
+
+	void MDST_RecordTeamworkAction(int playerId, string targetId = "", string targetName = "")
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendTeamworkAction(playerId, targetId, targetName);
 	}
 
 	void MDST_RecordObjectiveCompleted(int playerId)

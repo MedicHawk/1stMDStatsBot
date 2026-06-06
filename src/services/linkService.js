@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
 const { minutesFromNow, toMysqlDateTime } = require('../utils/time');
 const logger = require('../utils/logger');
+const statsService = require('./statsService');
 
 function makeCode() {
   return uuidv4().replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -109,6 +110,7 @@ async function unlinkDiscordUser(discordUserId) {
 }
 
 async function getProfileByDiscordId(discordUserId) {
+  await statsService.ensureSupportSchema();
   const [rows] = await pool.execute(
     `SELECT p.*,
             COALESCE(ps.player_kills, 0) AS player_kills,
@@ -117,6 +119,15 @@ async function getProfileByDiscordId(discordUserId) {
             COALESCE(ps.teamkills, 0) AS teamkills,
             COALESCE(ps.assists, 0) AS assists,
             COALESCE(ms.revives, 0) AS revives,
+            COALESCE(ms.heals, 0) AS heals,
+            COALESCE(ss.resupplies, 0) AS resupplies,
+            COALESCE(ss.supply_deliveries, 0) AS supply_deliveries,
+            COALESCE(ss.repairs, 0) AS support_repairs,
+            COALESCE(ss.builds, 0) AS builds,
+            COALESCE(ss.transports, 0) AS transports,
+            COALESCE(ss.teamwork_actions, 0) AS teamwork_actions,
+            COALESCE(vs.repairs, 0) AS vehicle_repairs,
+            COALESCE(px.xp, 0) AS xp,
             COALESCE(mv.distance_foot_meters, 0) AS distance_foot_meters,
             COALESCE(mv.distance_vehicle_meters, 0) AS distance_vehicle_meters,
             COALESCE(sess.value_seconds, 0) AS playtime_seconds
@@ -133,10 +144,31 @@ async function getProfileByDiscordId(discordUserId) {
        GROUP BY player_id
      ) ps ON ps.player_id = p.id
      LEFT JOIN (
-       SELECT player_id, SUM(revives) AS revives
+       SELECT player_id, SUM(revives) AS revives, SUM(heals) AS heals
        FROM medical_stats
        GROUP BY player_id
      ) ms ON ms.player_id = p.id
+     LEFT JOIN (
+       SELECT player_id,
+              SUM(resupplies) AS resupplies,
+              SUM(supply_deliveries) AS supply_deliveries,
+              SUM(repairs) AS repairs,
+              SUM(builds) AS builds,
+              SUM(transports) AS transports,
+              SUM(teamwork_actions) AS teamwork_actions
+       FROM support_stats
+       GROUP BY player_id
+     ) ss ON ss.player_id = p.id
+     LEFT JOIN (
+       SELECT player_id, SUM(repairs) AS repairs
+       FROM vehicle_stats
+       GROUP BY player_id
+     ) vs ON vs.player_id = p.id
+     LEFT JOIN (
+       SELECT player_id, SUM(xp) AS xp
+       FROM player_xp
+       GROUP BY player_id
+     ) px ON px.player_id = p.id
      LEFT JOIN (
        SELECT player_id,
               SUM(distance_foot_meters) AS distance_foot_meters,

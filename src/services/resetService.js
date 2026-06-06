@@ -11,6 +11,9 @@ const SERVER_DATA_TABLES = [
   'movement_stats',
   'objective_stats',
   'medical_stats',
+  'support_stats',
+  'xp_events',
+  'player_xp',
   'leaderboard_cache',
   'discord_published_messages',
   'servers'

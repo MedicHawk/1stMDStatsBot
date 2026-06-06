@@ -6,7 +6,7 @@ const { addSeasonOption, resolveSeasonId } = require('../services/seasonFilter')
 const data = addSeasonOption(new SlashCommandBuilder()
   .setName('leaderboard')
   .setDescription('Show a filtered leaderboard.')
-  .addStringOption((option) => option.setName('type').setDescription('kills, aikills, deaths, hours, revives, distance').setRequired(false))
+  .addStringOption((option) => option.setName('type').setDescription('kills, aikills, deaths, hours, revives, heals, repairs, support, xp, distance').setRequired(false))
   .addStringOption((option) => option.setName('server').setDescription('Server ID filter').setRequired(false))
   .addStringOption((option) => option.setName('category').setDescription('Category filter').setRequired(false))
   .addIntegerOption((option) => option.setName('limit').setDescription('Number of rows').setRequired(false)));

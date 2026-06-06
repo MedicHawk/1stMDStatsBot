@@ -1,5 +1,6 @@
 const pool = require('../db/pool');
 const { parsePositiveInt } = require('../utils/validators');
+const statsService = require('./statsService');
 
 const SQL_BY_TYPE = {
   kills: 'ps.player_kills',
@@ -7,7 +8,9 @@ const SQL_BY_TYPE = {
   deaths: 'ps.deaths',
   hours: 'SUM(sess.duration_seconds)',
   revives: 'ms.revives',
-  distance: 'mv.distance_foot_meters + mv.distance_vehicle_meters'
+  heals: 'ms.heals',
+  distance: 'mv.distance_foot_meters + mv.distance_vehicle_meters',
+  xp: 'px.xp'
 };
 
 async function getLeaderboard(type, filters = {}) {
@@ -83,6 +86,7 @@ async function getCachedLeaderboard(type, filters = {}) {
 }
 
 async function buildLeaderboard(type, filters = {}) {
+  await statsService.ensureSupportSchema();
   const limit = parsePositiveInt(filters.limit, 10);
   const queryFilters = {
     server: filters.server || null,
@@ -135,6 +139,84 @@ async function buildLeaderboard(type, filters = {}) {
          AND (:category IS NULL OR c.slug = :category)
          AND (:seasonId IS NULL OR ms.season_id = :seasonId)
        GROUP BY p.id, p.display_name, p.reforger_player_id
+       ORDER BY value DESC
+       LIMIT ${limit}`,
+      queryFilters
+    );
+    return { type, filters, rows, cached: false };
+  }
+
+  if (type === 'heals') {
+    const [rows] = await pool.execute(
+      `SELECT p.display_name, p.reforger_player_id, SUM(ms.heals) AS value
+       FROM medical_stats ms
+       JOIN players p ON p.id = ms.player_id
+       JOIN servers s ON s.id = ms.server_id
+       JOIN server_categories c ON c.id = s.category_id
+       WHERE (:server IS NULL OR s.server_id = :server)
+         AND (:category IS NULL OR c.slug = :category)
+         AND (:seasonId IS NULL OR ms.season_id = :seasonId)
+       GROUP BY p.id, p.display_name, p.reforger_player_id
+       ORDER BY value DESC
+       LIMIT ${limit}`,
+      queryFilters
+    );
+    return { type, filters, rows, cached: false };
+  }
+
+  if (type === 'xp') {
+    const [rows] = await pool.execute(
+      `SELECT p.display_name, p.reforger_player_id, SUM(px.xp) AS value
+       FROM player_xp px
+       JOIN players p ON p.id = px.player_id
+       JOIN servers s ON s.id = px.server_id
+       JOIN server_categories c ON c.id = s.category_id
+       WHERE (:server IS NULL OR s.server_id = :server)
+         AND (:category IS NULL OR c.slug = :category)
+         AND (:seasonId IS NULL OR px.season_id = :seasonId)
+       GROUP BY p.id, p.display_name, p.reforger_player_id
+       ORDER BY value DESC
+       LIMIT ${limit}`,
+      queryFilters
+    );
+    return { type, filters, rows, cached: false };
+  }
+
+  if (type === 'support') {
+    const [rows] = await pool.execute(
+      `SELECT p.display_name, p.reforger_player_id,
+              SUM(ss.resupplies + ss.supply_deliveries + ss.repairs + ss.builds + ss.transports + ss.teamwork_actions) AS value
+       FROM support_stats ss
+       JOIN players p ON p.id = ss.player_id
+       JOIN servers s ON s.id = ss.server_id
+       JOIN server_categories c ON c.id = s.category_id
+       WHERE (:server IS NULL OR s.server_id = :server)
+         AND (:category IS NULL OR c.slug = :category)
+         AND (:seasonId IS NULL OR ss.season_id = :seasonId)
+       GROUP BY p.id, p.display_name, p.reforger_player_id
+       ORDER BY value DESC
+       LIMIT ${limit}`,
+      queryFilters
+    );
+    return { type, filters, rows, cached: false };
+  }
+
+  if (type === 'repairs') {
+    const [rows] = await pool.execute(
+      `SELECT p.display_name, p.reforger_player_id, SUM(repair_rows.value) AS value
+       FROM (
+         SELECT server_id, player_id, season_id, repairs AS value FROM support_stats
+         UNION ALL
+         SELECT server_id, player_id, season_id, repairs AS value FROM vehicle_stats
+       ) repair_rows
+       JOIN players p ON p.id = repair_rows.player_id
+       JOIN servers s ON s.id = repair_rows.server_id
+       JOIN server_categories c ON c.id = s.category_id
+       WHERE (:server IS NULL OR s.server_id = :server)
+         AND (:category IS NULL OR c.slug = :category)
+         AND (:seasonId IS NULL OR repair_rows.season_id = :seasonId)
+       GROUP BY p.id, p.display_name, p.reforger_player_id
+       HAVING value > 0
        ORDER BY value DESC
        LIMIT ${limit}`,
       queryFilters

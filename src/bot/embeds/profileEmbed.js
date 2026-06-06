@@ -21,16 +21,27 @@ function profileEmbed(profile) {
   const deaths = Number(profile.deaths || 0);
   const kd = deaths > 0 ? (kills / deaths).toFixed(2) : kills > 0 ? 'Perfect' : '0.00';
   const totalDistance = Number(profile.distance_foot_meters || 0) + Number(profile.distance_vehicle_meters || 0);
+  const supportTotal = Number(profile.resupplies || 0) +
+    Number(profile.supply_deliveries || 0) +
+    Number(profile.support_repairs || 0) +
+    Number(profile.builds || 0) +
+    Number(profile.transports || 0) +
+    Number(profile.teamwork_actions || 0);
 
   return new EmbedBuilder()
     .setTitle(profile.display_name || 'Linked Reforger Player')
     .addFields(
+      { name: 'XP', value: Number(profile.xp || 0).toLocaleString(), inline: true },
       { name: 'Playtime', value: formatDuration(profile.playtime_seconds || 0), inline: true },
       { name: 'K/D', value: kd, inline: true },
       { name: 'Player Kills', value: String(kills), inline: true },
       { name: 'AI Kills', value: String(profile.ai_kills || 0), inline: true },
       { name: 'Deaths', value: String(deaths), inline: true },
       { name: 'Revives', value: String(profile.revives || 0), inline: true },
+      { name: 'Heals', value: String(profile.heals || 0), inline: true },
+      { name: 'Vehicle Repairs', value: String(profile.vehicle_repairs || 0), inline: true },
+      { name: 'Support Actions', value: String(supportTotal), inline: true },
+      { name: 'Teamwork', value: String(profile.teamwork_actions || 0), inline: true },
       { name: 'Total Distance', value: formatDistance(totalDistance), inline: true },
       { name: 'Foot Distance', value: formatDistance(profile.distance_foot_meters), inline: true },
       { name: 'Vehicle Distance', value: formatDistance(profile.distance_vehicle_meters), inline: true }

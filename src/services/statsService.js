@@ -11,6 +11,52 @@ const ADJUSTABLE_PLAYER_STATS = new Set([
   'hits'
 ]);
 
+const XP_VALUES = {
+  combat: {
+    kill: 100,
+    ai_kill: 25,
+    assist: 50,
+    teamkill: -100
+  },
+  medical: {
+    revive: 75,
+    bandage: 15,
+    tourniquet: 20,
+    heal: 25
+  },
+  vehicle: {
+    kill: 75,
+    assist: 35,
+    destroyed: 50,
+    repair: 50,
+    travel: 5
+  },
+  objective: {
+    capture: 150,
+    defense: 100,
+    objective_completed: 200,
+    mission_participation: 25,
+    pvp_win: 100,
+    pvp_loss: 25
+  },
+  support: {
+    resupply: 25,
+    ammo_resupply: 25,
+    supply_delivery: 75,
+    repair: 50,
+    vehicle_repair: 50,
+    build: 40,
+    fortification: 40,
+    transport: 35,
+    teamwork: 30,
+    squad_support: 30,
+    spot: 20,
+    deploy_spawn: 50
+  }
+};
+
+let supportSchemaReady = false;
+
 function parsePositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -48,6 +94,125 @@ async function withPlayer(server, season, payload, callback) {
   }
 }
 
+async function ensureColumn(tableName, columnName, definition) {
+  const [rows] = await pool.execute(
+    `SELECT COUNT(*) AS count
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = :tableName
+       AND COLUMN_NAME = :columnName`,
+    { tableName, columnName }
+  );
+
+  if (Number(rows[0].count) === 0) {
+    await pool.execute(`ALTER TABLE ${tableName} ADD COLUMN ${definition}`);
+  }
+}
+
+async function ensureSupportSchema() {
+  if (supportSchemaReady) {
+    return;
+  }
+
+  await ensureColumn('medical_stats', 'heals', 'heals INT UNSIGNED NOT NULL DEFAULT 0 AFTER tourniquets_used');
+  await ensureColumn('vehicle_stats', 'repairs', 'repairs INT UNSIGNED NOT NULL DEFAULT 0 AFTER crashes');
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS support_stats (
+       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       server_id BIGINT UNSIGNED NOT NULL,
+       player_id BIGINT UNSIGNED NOT NULL,
+       season_id BIGINT UNSIGNED NULL,
+       resupplies INT UNSIGNED NOT NULL DEFAULT 0,
+       supply_deliveries INT UNSIGNED NOT NULL DEFAULT 0,
+       repairs INT UNSIGNED NOT NULL DEFAULT 0,
+       builds INT UNSIGNED NOT NULL DEFAULT 0,
+       transports INT UNSIGNED NOT NULL DEFAULT 0,
+       teamwork_actions INT UNSIGNED NOT NULL DEFAULT 0,
+       season_scope_id BIGINT UNSIGNED AS (COALESCE(season_id, 0)) STORED,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       UNIQUE KEY uniq_support_scope (server_id, player_id, season_scope_id),
+       CONSTRAINT fk_support_server FOREIGN KEY (server_id) REFERENCES servers(id),
+       CONSTRAINT fk_support_player FOREIGN KEY (player_id) REFERENCES players(id),
+       CONSTRAINT fk_support_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+     )`
+  );
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS player_xp (
+       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       server_id BIGINT UNSIGNED NOT NULL,
+       player_id BIGINT UNSIGNED NOT NULL,
+       season_id BIGINT UNSIGNED NULL,
+       xp INT NOT NULL DEFAULT 0,
+       season_scope_id BIGINT UNSIGNED AS (COALESCE(season_id, 0)) STORED,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       UNIQUE KEY uniq_player_xp_scope (server_id, player_id, season_scope_id),
+       CONSTRAINT fk_player_xp_server FOREIGN KEY (server_id) REFERENCES servers(id),
+       CONSTRAINT fk_player_xp_player FOREIGN KEY (player_id) REFERENCES players(id),
+       CONSTRAINT fk_player_xp_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+     )`
+  );
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS xp_events (
+       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       server_id BIGINT UNSIGNED NOT NULL,
+       player_id BIGINT UNSIGNED NOT NULL,
+       season_id BIGINT UNSIGNED NULL,
+       source_type VARCHAR(32) NOT NULL,
+       source_event VARCHAR(64) NOT NULL,
+       xp_delta INT NOT NULL,
+       details JSON NULL,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       INDEX idx_xp_events_player (player_id, created_at),
+       CONSTRAINT fk_xp_events_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+       CONSTRAINT fk_xp_events_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+       CONSTRAINT fk_xp_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+     )`
+  );
+
+  supportSchemaReady = true;
+}
+
+function xpFor(sourceType, eventType) {
+  return XP_VALUES[sourceType]?.[eventType] || 0;
+}
+
+async function awardXp(connection, server, player, seasonId, sourceType, eventType, payload = {}) {
+  const xpDelta = xpFor(sourceType, eventType);
+  if (!xpDelta) {
+    return;
+  }
+
+  await connection.execute(
+    `INSERT INTO player_xp (server_id, player_id, season_id, xp)
+     VALUES (:serverId, :playerId, :seasonId, :xpDelta)
+     ON DUPLICATE KEY UPDATE xp = GREATEST(xp + :xpDelta, 0)`,
+    { serverId: server.id, playerId: player.id, seasonId, xpDelta }
+  );
+
+  await connection.execute(
+    `INSERT INTO xp_events (server_id, player_id, season_id, source_type, source_event, xp_delta, details)
+     VALUES (:serverId, :playerId, :seasonId, :sourceType, :sourceEvent, :xpDelta, :details)`,
+    {
+      serverId: server.id,
+      playerId: player.id,
+      seasonId,
+      sourceType,
+      sourceEvent: eventType,
+      xpDelta,
+      details: JSON.stringify({
+        weapon_id: payload.weapon_id || null,
+        weapon_name: payload.weapon_name || null,
+        vehicle_id: payload.vehicle_id || null,
+        vehicle_name: payload.vehicle_name || null,
+        distance_meters: payload.distance_meters || null
+      })
+    }
+  );
+}
+
 async function closeOpenSessionsForServer(connection, serverId) {
   await connection.execute(
     `UPDATE player_sessions
@@ -69,6 +234,7 @@ async function closeOpenSessionsForPlayer(connection, serverId, playerId) {
 }
 
 async function recordCombatEvent(server, season, payload) {
+  await ensureSupportSchema();
   await killFeedService.ensureKillFeedTable();
 
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
@@ -124,12 +290,14 @@ async function recordCombatEvent(server, season, payload) {
     }
 
     await killFeedService.recordKillFeedEvent(connection, server, player, payload);
+    await awardXp(connection, server, player, seasonId, 'combat', payload.event_type, payload);
   });
 }
 
 async function recordMedicalEvent(server, season, payload) {
+  await ensureSupportSchema();
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
-    const fields = { revive: 'revives', bandage: 'bandages_used', tourniquet: 'tourniquets_used' };
+    const fields = { revive: 'revives', bandage: 'bandages_used', tourniquet: 'tourniquets_used', heal: 'heals' };
     const column = fields[payload.event_type];
     if (!column) return;
     await connection.execute(
@@ -143,19 +311,21 @@ async function recordMedicalEvent(server, season, payload) {
         medicSeconds: payload.time_as_medic_seconds || 0
       }
     );
+    await awardXp(connection, server, player, seasonId, 'medical', payload.event_type, payload);
   });
 }
 
 async function recordVehicleEvent(server, season, payload) {
+  await ensureSupportSchema();
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
     const isTravelOnly = payload.event_type === 'travel';
     await connection.execute(
       `INSERT INTO vehicle_stats
-        (server_id, player_id, season_id, vehicle_id, vehicle_name, kills, deaths, assists, destroyed, crashes, distance_driven_meters, distance_passenger_meters, time_in_vehicle_seconds)
-       VALUES (:serverId, :playerId, :seasonId, :vehicleId, :vehicleName, :kills, :deaths, :assists, :destroyed, :crashes, :driven, :passenger, :seconds)
+        (server_id, player_id, season_id, vehicle_id, vehicle_name, kills, deaths, assists, destroyed, crashes, repairs, distance_driven_meters, distance_passenger_meters, time_in_vehicle_seconds)
+       VALUES (:serverId, :playerId, :seasonId, :vehicleId, :vehicleName, :kills, :deaths, :assists, :destroyed, :crashes, :repairs, :driven, :passenger, :seconds)
        ON DUPLICATE KEY UPDATE
          kills = kills + VALUES(kills), deaths = deaths + VALUES(deaths), assists = assists + VALUES(assists),
-         destroyed = destroyed + VALUES(destroyed), crashes = crashes + VALUES(crashes),
+         destroyed = destroyed + VALUES(destroyed), crashes = crashes + VALUES(crashes), repairs = repairs + VALUES(repairs),
          distance_driven_meters = distance_driven_meters + VALUES(distance_driven_meters),
          distance_passenger_meters = distance_passenger_meters + VALUES(distance_passenger_meters),
          time_in_vehicle_seconds = time_in_vehicle_seconds + VALUES(time_in_vehicle_seconds)`,
@@ -170,11 +340,13 @@ async function recordVehicleEvent(server, season, payload) {
         assists: payload.event_type === 'assist' && !isTravelOnly ? 1 : 0,
         destroyed: payload.event_type === 'destroyed' ? 1 : 0,
         crashes: payload.event_type === 'crash' ? 1 : 0,
+        repairs: payload.event_type === 'repair' ? 1 : 0,
         driven: payload.distance_driven_meters || 0,
         passenger: payload.distance_passenger_meters || 0,
         seconds: payload.time_in_vehicle_seconds || 0
       }
     );
+    await awardXp(connection, server, player, seasonId, 'vehicle', payload.event_type, payload);
   });
 }
 
@@ -208,6 +380,7 @@ async function recordMovementUpdate(server, season, payload) {
 }
 
 async function recordObjectiveEvent(server, season, payload) {
+  await ensureSupportSchema();
   await withPlayer(server, season, payload, async (connection, player, seasonId) => {
     const fields = {
       capture: 'captures',
@@ -225,6 +398,38 @@ async function recordObjectiveEvent(server, season, payload) {
        ON DUPLICATE KEY UPDATE ${column} = ${column} + 1`,
       { serverId: server.id, playerId: player.id, seasonId }
     );
+    await awardXp(connection, server, player, seasonId, 'objective', payload.event_type, payload);
+  });
+}
+
+async function recordSupportEvent(server, season, payload) {
+  await ensureSupportSchema();
+  await withPlayer(server, season, payload, async (connection, player, seasonId) => {
+    const fields = {
+      resupply: 'resupplies',
+      ammo_resupply: 'resupplies',
+      supply_delivery: 'supply_deliveries',
+      repair: 'repairs',
+      vehicle_repair: 'repairs',
+      build: 'builds',
+      fortification: 'builds',
+      transport: 'transports',
+      teamwork: 'teamwork_actions',
+      squad_support: 'teamwork_actions',
+      spot: 'teamwork_actions',
+      deploy_spawn: 'teamwork_actions'
+    };
+    const column = fields[payload.event_type];
+    if (!column) return;
+
+    await connection.execute(
+      `INSERT INTO support_stats (server_id, player_id, season_id, ${column})
+       VALUES (:serverId, :playerId, :seasonId, 1)
+       ON DUPLICATE KEY UPDATE ${column} = ${column} + 1`,
+      { serverId: server.id, playerId: player.id, seasonId }
+    );
+
+    await awardXp(connection, server, player, seasonId, 'support', payload.event_type, payload);
   });
 }
 
@@ -410,6 +615,7 @@ module.exports = {
   recordVehicleEvent,
   recordMovementUpdate,
   recordObjectiveEvent,
+  recordSupportEvent,
   startSession,
   endSession,
   startMatch,
@@ -417,5 +623,6 @@ module.exports = {
   closeOpenServerSessions,
   listOpenSessions,
   closeStaleOpenSessions,
-  adjustPlayerStat
+  adjustPlayerStat,
+  ensureSupportSchema
 };
