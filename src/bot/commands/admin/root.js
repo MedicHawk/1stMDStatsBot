@@ -33,15 +33,15 @@ module.exports = {
       const withTarget = addSendableTargetOptions(
         sub
           .setName('say')
-          .setDescription('Send a message as the bot.'),
+          .setDescription('Send a message as the bot.')
+          .addStringOption((option) => option
+            .setName('message')
+            .setDescription('Message content.')
+            .setRequired(true)
+            .setMaxLength(2000)),
         'Target'
       );
       return withTarget
-        .addStringOption((option) => option
-          .setName('message')
-          .setDescription('Message content.')
-          .setRequired(true)
-          .setMaxLength(2000))
         .addBooleanOption((option) => option
           .setName('allow_mentions')
           .setDescription('Allow user, role, and everyone mentions in the sent message.'));
