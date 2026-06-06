@@ -435,7 +435,7 @@ async function recordSupportEvent(server, season, payload) {
 
 async function getPlayerSnapshot(server, season, reforgerPlayerId) {
   await ensureSupportSchema();
-  const seasonId = season ? season.id : null;
+  await killFeedService.ensureKillFeedTable();
   const [[player]] = await pool.execute(
     'SELECT id, reforger_player_id, display_name FROM players WHERE reforger_player_id = :reforgerPlayerId LIMIT 1',
     { reforgerPlayerId }
@@ -452,51 +452,83 @@ async function getPlayerSnapshot(server, season, reforgerPlayerId) {
     };
   }
 
-  const [[stats]] = await pool.execute(
-    `SELECT COALESCE(SUM(player_kills), 0) AS player_kills,
-            COALESCE(SUM(ai_kills), 0) AS ai_kills,
-            COALESCE(SUM(deaths), 0) AS deaths
-     FROM player_stats
+  const [[session]] = await pool.execute(
+    `SELECT id, started_at
+     FROM player_sessions
      WHERE server_id = :serverId
        AND player_id = :playerId
-       AND (:seasonId IS NULL OR season_id = :seasonId)`,
-    { serverId: server.id, playerId: player.id, seasonId }
+     ORDER BY ended_at IS NULL DESC, started_at DESC
+     LIMIT 1`,
+    { serverId: server.id, playerId: player.id }
+  );
+
+  const sessionStartedAt = session?.started_at || new Date();
+
+  const [[stats]] = await pool.execute(
+    `SELECT
+       SUM(CASE WHEN event_type = 'kill' THEN 1 ELSE 0 END) AS player_kills,
+       SUM(CASE WHEN event_type = 'ai_kill' THEN 1 ELSE 0 END) AS ai_kills,
+       SUM(CASE WHEN event_type = 'teamkill' THEN 1 ELSE 0 END) AS teamkills
+     FROM kill_feed_events
+     WHERE server_id = :serverId
+       AND player_id = :playerId
+       AND created_at >= :sessionStartedAt`,
+    { serverId: server.id, playerId: player.id, sessionStartedAt }
+  );
+
+  const [[deathStats]] = await pool.execute(
+    `SELECT COUNT(*) AS deaths
+     FROM kill_feed_events
+     WHERE server_id = :serverId
+       AND target_reforger_id = :targetReforgerId
+       AND event_type IN ('kill', 'teamkill')
+       AND created_at >= :sessionStartedAt`,
+    { serverId: server.id, targetReforgerId: player.reforger_player_id, sessionStartedAt }
   );
 
   const [[xpRow]] = await pool.execute(
-    `SELECT COALESCE(SUM(xp), 0) AS xp
-     FROM player_xp
+    `SELECT COALESCE(SUM(xp_delta), 0) AS xp
+     FROM xp_events
      WHERE server_id = :serverId
        AND player_id = :playerId
-       AND (:seasonId IS NULL OR season_id = :seasonId)`,
-    { serverId: server.id, playerId: player.id, seasonId }
+       AND created_at >= :sessionStartedAt`,
+    { serverId: server.id, playerId: player.id, sessionStartedAt }
   );
 
+  const playerKills = Number(stats.player_kills || 0);
+  const aiKills = Number(stats.ai_kills || 0);
+  const kills = playerKills + aiKills;
+  const deaths = Number(deathStats.deaths || 0);
   const xp = Number(xpRow.xp || 0);
   const [[rankRow]] = await pool.execute(
     `SELECT COUNT(*) + 1 AS rank
      FROM (
-       SELECT player_id, SUM(xp) AS total_xp
-       FROM player_xp
-       WHERE server_id = :serverId
-         AND (:seasonId IS NULL OR season_id = :seasonId)
-       GROUP BY player_id
-       HAVING total_xp > :xp
+       SELECT sess.player_id, COALESCE(SUM(xp.xp_delta), 0) AS session_xp
+       FROM player_sessions sess
+       LEFT JOIN xp_events xp
+         ON xp.server_id = sess.server_id
+        AND xp.player_id = sess.player_id
+        AND xp.created_at >= sess.started_at
+       WHERE sess.server_id = :serverId
+         AND sess.ended_at IS NULL
+       GROUP BY sess.player_id
+       HAVING session_xp > :xp
      ) ranked`,
-    { serverId: server.id, seasonId, xp }
+    { serverId: server.id, xp }
   );
 
-  const kills = Number(stats.player_kills || 0);
-  const deaths = Number(stats.deaths || 0);
   const kd = deaths > 0 ? (kills / deaths).toFixed(2) : kills > 0 ? 'Perfect' : '0.00';
 
   return {
-    player_kills: kills,
-    ai_kills: Number(stats.ai_kills || 0),
+    kills,
+    player_kills: playerKills,
+    ai_kills: aiKills,
     deaths,
+    teamkills: Number(stats.teamkills || 0),
     kd,
     rank: Number(rankRow.rank || 1),
-    xp
+    xp,
+    session_id: session?.id || null
   };
 }
 
