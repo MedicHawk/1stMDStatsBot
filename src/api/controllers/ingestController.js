@@ -55,7 +55,7 @@ async function combatEvent(req, res, next) {
     await statsService.recordCombatEvent(req.server, season, req.body);
     if (wantsSnapshot(req.body)) {
       const snapshot = await statsService.getPlayerSnapshot(req.server, season, req.body.player_reforger_id);
-      res.type('text/plain').status(202).send(buildKillToastText(req.body.event_type, snapshot));
+      res.status(202).json(buildKillToastText(req.body.event_type, snapshot));
       return;
     }
 

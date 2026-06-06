@@ -49,8 +49,23 @@ class MDST_KillToastRestCallback : MDST_StatsRestCallback
 			return;
 		}
 
-		Print(string.Format("[1stMD Stats] Kill toast snapshot received player_id=%1 bytes=%2 text=%3", m_iPlayerId, dataSize, data), LogLevel.NORMAL);
-		SCR_PlayerControllerGroupComponent.MDST_ShowKillToastToPlayer(m_iPlayerId, data);
+		string toastText = DecodeJsonStringResponse(data);
+		Print(string.Format("[1stMD Stats] Kill toast snapshot received player_id=%1 bytes=%2 text=%3", m_iPlayerId, dataSize, toastText), LogLevel.NORMAL);
+		SCR_PlayerControllerGroupComponent.MDST_ShowKillToastToPlayer(m_iPlayerId, toastText);
+	}
+
+	protected string DecodeJsonStringResponse(string data)
+	{
+		string text = data;
+		int length = text.Length();
+		if (length >= 2 && text.StartsWith("\"") && text.EndsWith("\""))
+			text = text.Substring(1, length - 2);
+
+		text.Replace("\\n", "\n");
+		text.Replace("\\r", "");
+		text.Replace("\\\"", "\"");
+		text.Replace("\\\\", "\\");
+		return text;
 	}
 }
 
