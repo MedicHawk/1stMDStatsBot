@@ -84,6 +84,7 @@ Example:
 - Best-effort weapon/source metadata for AI kills and player kills
 - AI kill attribution helpers for player ID, killer entity, instigator, and nearest-player fallback
 - Chat account linking with `!link CODE`
+- User-triggered stats popup with `!stats` or `/stats`
 - Helper methods for link verification, combat, medical, vehicle, objective, match, and mod-list events
 
 ## Integration Points
@@ -92,6 +93,7 @@ The Reforger API surface changes across builds, so identity and event hooks are 
 
 - `MDST_PlayerIdentityService.GetStablePlayerId` currently uses `SCR_PlayerIdentityUtils.GetPlayerIdentityId`.
 - Players can run `!link CODE` in chat after generating a code with Discord `/link`.
+- Players can run `!stats` or `/stats` in chat to show their current stats popup; combat events no longer show it automatically.
 - Other addons can still call `MDST_StatsGameModeComponent.GetInstance().SendLinkCode(playerId, code)` directly.
 - From other server-side scripts, call `SCR_BaseGameMode.MDST_RecordAIKill`, `MDST_RecordAIKilledByPlayer`, `MDST_RecordAIKilledByEntity`, `MDST_RecordAIKilledByInstigator`, `MDST_RecordRevive`, `MDST_RecordObjectiveCompleted`, or the component wrapper methods directly.
 - For your endless objective system, call `MDST_RecordObjectiveCompletedNear(objectivePosition, radiusMeters)` when an objective completes. Nearby players receive both mission participation and objective completion credit.

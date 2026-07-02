@@ -258,6 +258,24 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void SendPlayerSnapshotToast(int playerId)
+	{
+		if (!IsStatsReady())
+			return;
+
+		MDST_PlayerIdentity identity = m_IdentityService.Resolve(playerId);
+		if (!identity || !identity.IsValid())
+			return;
+
+		string json = "{" +
+			MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + "," +
+			MDST_Json.PairString("player_name", identity.m_sDisplayName) +
+		"}";
+
+		m_RestClient.PostWithKillToast("api/ingest/snapshot", json, playerId);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void SendCombatEvent(int playerId, string eventType, string weaponId = "", string weaponName = "", float distanceMeters = 0, int shotsFired = 0, int hits = 0, bool includeSnapshot = false)
 	{
 		if (!IsStatsReady())
@@ -333,19 +351,19 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	//------------------------------------------------------------------------------------------------
 	void SendPlayerKill(int playerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
 	{
-		SendCombatEvent(playerId, "kill", weaponId, weaponName, distanceMeters, 0, 0, true);
+		SendCombatEvent(playerId, "kill", weaponId, weaponName, distanceMeters);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void SendPlayerKillWithTarget(int playerId, int targetPlayerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
 	{
-		SendCombatEventWithTarget(playerId, "kill", targetPlayerId, "player", weaponId, weaponName, distanceMeters, 0, 0, true);
+		SendCombatEventWithTarget(playerId, "kill", targetPlayerId, "player", weaponId, weaponName, distanceMeters);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void SendAIKill(int playerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
 	{
-		SendCombatEvent(playerId, "ai_kill", weaponId, weaponName, distanceMeters, 0, 0, true);
+		SendCombatEvent(playerId, "ai_kill", weaponId, weaponName, distanceMeters);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -384,13 +402,13 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	//------------------------------------------------------------------------------------------------
 	void SendTeamkill(int playerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
 	{
-		SendCombatEvent(playerId, "teamkill", weaponId, weaponName, distanceMeters, 0, 0, true);
+		SendCombatEvent(playerId, "teamkill", weaponId, weaponName, distanceMeters);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void SendTeamkillWithTarget(int playerId, int targetPlayerId, string weaponId = "", string weaponName = "", float distanceMeters = 0)
 	{
-		SendCombatEventWithTarget(playerId, "teamkill", targetPlayerId, "player", weaponId, weaponName, distanceMeters, 0, 0, true);
+		SendCombatEventWithTarget(playerId, "teamkill", targetPlayerId, "player", weaponId, weaponName, distanceMeters);
 	}
 
 	//------------------------------------------------------------------------------------------------

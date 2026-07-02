@@ -183,6 +183,16 @@ The Reforger mod should sample every 5-10 seconds, ignore dead players, reject i
 
 Supported objective values: `capture`, `defense`, `objective_completed`, `mission_participation`, `pvp_win`, `pvp_loss`.
 
+`POST /api/ingest/snapshot`
+
+```json
+{
+  "player_reforger_id": "stable-player-id"
+}
+```
+
+Returns a formatted player stats popup string without recording a stat event.
+
 `POST /api/ingest/smoke-test`
 
 ```json

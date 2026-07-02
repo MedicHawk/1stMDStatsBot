@@ -32,6 +32,12 @@ modded class SCR_PlayerControllerGroupComponent
 		Rpc(MDST_RpcRequestLinkCode, code);
 	}
 
+	void MDST_RequestStatsToast()
+	{
+		Print("[1stMD Stats] Stats toast requested from local player controller.", LogLevel.NORMAL);
+		Rpc(MDST_RpcRequestStatsToast);
+	}
+
 	void MDST_ShowKillToast(string text)
 	{
 		if (text.IsEmpty())
@@ -65,6 +71,26 @@ modded class SCR_PlayerControllerGroupComponent
 		}
 
 		stats.SendLinkCode(playerId, code);
+	}
+
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void MDST_RpcRequestStatsToast()
+	{
+		int playerId = GetPlayerID();
+		if (playerId <= 0)
+		{
+			Print("[1stMD Stats] Stats toast rejected because player id is unavailable.", LogLevel.WARNING);
+			return;
+		}
+
+		MDST_StatsGameModeComponent stats = MDST_StatsGameModeComponent.GetInstance();
+		if (!stats || !stats.IsStatsReady())
+		{
+			Print("[1stMD Stats] Stats toast rejected because stats component is not ready.", LogLevel.WARNING);
+			return;
+		}
+
+		stats.SendPlayerSnapshotToast(playerId);
 	}
 
 	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]

@@ -10,6 +10,7 @@ router.post('/medical', controller.medicalEvent);
 router.post('/vehicle', controller.vehicleEvent);
 router.post('/movement', controller.movementUpdate);
 router.post('/objective', controller.objectiveEvent);
+router.post('/snapshot', controller.snapshotEvent);
 router.post('/support', controller.supportEvent);
 router.post('/smoke-test', controller.smokeTest);
 router.post('/session/start', controller.sessionStart);

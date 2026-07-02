@@ -21,23 +21,13 @@ const VALID_SUPPORT_EVENTS = new Set([
   'deploy_spawn'
 ]);
 
-function wantsSnapshot(body) {
-  return body.include_snapshot === true || body.include_snapshot === 'true' || body.include_snapshot === 1 || body.include_snapshot === '1';
-}
-
 function formatNumber(value) {
   return Number(value || 0).toLocaleString('en-US');
 }
 
-function buildKillToastText(eventType, snapshot) {
-  const title = eventType === 'teamkill'
-    ? 'Teamkill'
-    : eventType === 'ai_kill'
-      ? 'AI Kill'
-      : 'Kill Confirmed';
+function buildStatsToastText(snapshot) {
   const rank = snapshot.rank_name || 'Unranked';
-
-  return `${title}\nK/D ${snapshot.kd} | Rank ${rank} | XP ${formatNumber(snapshot.xp)}`;
+  return `Player Stats\nK/D ${snapshot.kd} | Rank ${rank} | XP ${formatNumber(snapshot.xp)}`;
 }
 
 function requireEventType(eventType, validEvents) {
@@ -53,12 +43,6 @@ async function combatEvent(req, res, next) {
     requireEventType(req.body.event_type, VALID_COMBAT_EVENTS);
     const season = await seasonService.getCurrentSeason();
     await statsService.recordCombatEvent(req.server, season, req.body);
-    if (wantsSnapshot(req.body)) {
-      const snapshot = await statsService.getPlayerSnapshot(req.server, season, req.body.player_reforger_id);
-      res.status(202).json(buildKillToastText(req.body.event_type, snapshot));
-      return;
-    }
-
     res.status(202).json({ accepted: true });
   } catch (error) {
     next(error);
@@ -107,6 +91,17 @@ async function objectiveEvent(req, res, next) {
     const season = await seasonService.getCurrentSeason();
     await statsService.recordObjectiveEvent(req.server, season, req.body);
     res.status(202).json({ accepted: true });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function snapshotEvent(req, res, next) {
+  try {
+    requireFields(req.body, ['player_reforger_id']);
+    const season = await seasonService.getCurrentSeason();
+    const snapshot = await statsService.getPlayerSnapshot(req.server, season, req.body.player_reforger_id);
+    res.status(202).json(buildStatsToastText(snapshot));
   } catch (error) {
     next(error);
   }
@@ -191,6 +186,7 @@ module.exports = {
   vehicleEvent,
   movementUpdate,
   objectiveEvent,
+  snapshotEvent,
   supportEvent,
   smokeTest,
   sessionStart,

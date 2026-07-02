@@ -50,6 +50,8 @@ Example:
 4. Mod sends the code and stable Reforger/platform player ID to `/api/link/verify`.
 5. API stores the Discord to Reforger account link.
 
+Players can also enter `!stats` or `/stats` in-game to request their current stats popup. Combat events record silently by default; the popup is only shown when the player asks for it.
+
 ## Movement Sampling
 
 Sample player position every 5-10 seconds.
