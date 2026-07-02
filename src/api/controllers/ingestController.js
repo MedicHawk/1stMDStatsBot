@@ -43,7 +43,7 @@ async function combatEvent(req, res, next) {
     requireEventType(req.body.event_type, VALID_COMBAT_EVENTS);
     const season = await seasonService.getCurrentSeason();
     await statsService.recordCombatEvent(req.server, season, req.body);
-    res.status(202).json({ accepted: true });
+    res.status(202).end();
   } catch (error) {
     next(error);
   }

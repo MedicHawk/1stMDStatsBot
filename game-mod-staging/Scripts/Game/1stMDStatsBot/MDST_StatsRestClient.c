@@ -49,17 +49,28 @@ class MDST_KillToastRestCallback : MDST_StatsRestCallback
 			return;
 		}
 
+		if (!IsJsonStringResponse(data))
+		{
+			Print(string.Format("[1stMD Stats] Kill toast snapshot ignored non-text response player_id=%1 endpoint=%2 bytes=%3", m_iPlayerId, m_sEndpoint, dataSize), LogLevel.NORMAL);
+			return;
+		}
+
 		string toastText = DecodeJsonStringResponse(data);
 		Print(string.Format("[1stMD Stats] Kill toast snapshot received player_id=%1 bytes=%2 text=%3", m_iPlayerId, dataSize, toastText), LogLevel.NORMAL);
 		SCR_PlayerControllerGroupComponent.MDST_ShowKillToastToPlayer(m_iPlayerId, toastText);
+	}
+
+	protected bool IsJsonStringResponse(string data)
+	{
+		int length = data.Length();
+		return length >= 2 && data.StartsWith("\"") && data.EndsWith("\"");
 	}
 
 	protected string DecodeJsonStringResponse(string data)
 	{
 		string text = data;
 		int length = text.Length();
-		if (length >= 2 && text.StartsWith("\"") && text.EndsWith("\""))
-			text = text.Substring(1, length - 2);
+		text = text.Substring(1, length - 2);
 
 		text.Replace("\\n", "\n");
 		text.Replace("\\r", "");
