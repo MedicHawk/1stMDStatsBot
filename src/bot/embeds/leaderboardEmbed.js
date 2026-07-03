@@ -27,6 +27,18 @@ function formatDistance(meters) {
   return `${Math.round(value)} m`;
 }
 
+function formatAmount(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) {
+    return '0';
+  }
+
+  return amount.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
 function formatLeaderboardValue(result, row) {
   if (result.type === 'hours') {
     const seconds = row.value_seconds ?? Number(row.value || 0) * 3600;
@@ -35,6 +47,10 @@ function formatLeaderboardValue(result, row) {
 
   if (result.type === 'distance') {
     return formatDistance(row.value || 0);
+  }
+
+  if (result.type === 'treatment' || result.type === 'support_amount') {
+    return formatAmount(row.value);
   }
 
   return Number(row.value || 0).toLocaleString();

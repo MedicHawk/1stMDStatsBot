@@ -57,6 +57,7 @@ app.get('/', (req, res) => {
       <li><a href="/health/db">Database health</a></li>
       <li><a href="/api/public/servers">Servers</a></li>
       <li><a href="/api/public/leaderboards/kills">Kills leaderboard</a></li>
+      <li><a href="/api/public/events/recent">Recent medical/support events</a></li>
     </ul>
   </main>
 </body>

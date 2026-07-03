@@ -62,6 +62,8 @@ The bot posts one status embed there and edits it on each refresh. When `DISCORD
 When `DISCORD_STATUS_PRESENCE_ENABLED=true`, the bot rich presence also shows aggregate server status, such as online server count and total players.
 
 Leaderboard channels work the same way: `/leaderboardchannel set` maps a channel, then the bot maintains one refreshed leaderboard message for that server instead of posting a new message each interval.
+
+Set `DISCORD_LEADERBOARD_TYPES` to choose which boards auto-publish, such as `kills,aikills,hours,xp,support,treatment,support_amount`. The `/leaderboard` command also supports medical boards for revives, bandages, tourniquets, heals, and treatment amount.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 

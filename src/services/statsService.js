@@ -753,6 +753,12 @@ async function closeStaleOpenSessions({ serverId = null, olderThanMinutes = 60 }
 async function listRecentSupportEvents({ serverId = null, type = 'all', limit = 15 } = {}) {
   await ensureSupportSchema();
   const rowLimit = Math.min(parsePositiveInt(limit, 15), 25);
+  if (!['all', 'medical', 'support'].includes(type)) {
+    const error = new Error(`Unsupported event family: ${type}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
   const includeMedical = type === 'all' || type === 'medical';
   const includeSupport = type === 'all' || type === 'support';
   const queries = [];

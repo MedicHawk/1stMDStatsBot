@@ -8,10 +8,31 @@ const SQL_BY_TYPE = {
   deaths: 'ps.deaths',
   hours: 'SUM(sess.duration_seconds)',
   revives: 'ms.revives',
+  bandages: 'ms.bandages_used',
+  tourniquets: 'ms.tourniquets_used',
   heals: 'ms.heals',
+  treatment: 'ms.treatment_amount',
   distance: 'mv.distance_foot_meters + mv.distance_vehicle_meters',
   xp: 'px.xp'
 };
+
+const DEFAULT_LEADERBOARD_TYPES = [
+  'kills',
+  'aikills',
+  'deaths',
+  'hours',
+  'revives',
+  'bandages',
+  'tourniquets',
+  'heals',
+  'treatment',
+  'repairs',
+  'support',
+  'support_amount',
+  'xp',
+  'distance'
+];
+const SUPPORTED_LEADERBOARD_TYPES = new Set(DEFAULT_LEADERBOARD_TYPES);
 
 async function getLeaderboard(type, filters = {}) {
   if (wantsCachedLeaderboard(filters)) {
@@ -48,7 +69,7 @@ async function refreshLeaderboard(type, filters = {}) {
 }
 
 async function refreshDefaultLeaderboards() {
-  const types = Object.keys(SQL_BY_TYPE);
+  const types = DEFAULT_LEADERBOARD_TYPES;
   const [categories] = await pool.execute('SELECT slug FROM server_categories');
   const [servers] = await pool.execute('SELECT server_id FROM servers WHERE enabled = TRUE');
   const refreshed = [];
@@ -87,6 +108,12 @@ async function getCachedLeaderboard(type, filters = {}) {
 
 async function buildLeaderboard(type, filters = {}) {
   await statsService.ensureSupportSchema();
+  if (!SUPPORTED_LEADERBOARD_TYPES.has(type)) {
+    const error = new Error(`Unsupported leaderboard type: ${type}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
   const limit = parsePositiveInt(filters.limit, 10);
   const queryFilters = {
     server: filters.server || null,
@@ -164,6 +191,29 @@ async function buildLeaderboard(type, filters = {}) {
     return { type, filters, rows, cached: false };
   }
 
+  if (type === 'bandages' || type === 'tourniquets' || type === 'treatment') {
+    const medicalColumns = {
+      bandages: 'ms.bandages_used',
+      tourniquets: 'ms.tourniquets_used',
+      treatment: 'ms.treatment_amount'
+    };
+    const [rows] = await pool.execute(
+      `SELECT p.display_name, p.reforger_player_id, SUM(${medicalColumns[type]}) AS value
+       FROM medical_stats ms
+       JOIN players p ON p.id = ms.player_id
+       JOIN servers s ON s.id = ms.server_id
+       JOIN server_categories c ON c.id = s.category_id
+       WHERE (:server IS NULL OR s.server_id = :server)
+         AND (:category IS NULL OR c.slug = :category)
+         AND (:seasonId IS NULL OR ms.season_id = :seasonId)
+       GROUP BY p.id, p.display_name, p.reforger_player_id
+       ORDER BY value DESC
+       LIMIT ${limit}`,
+      queryFilters
+    );
+    return { type, filters, rows, cached: false };
+  }
+
   if (type === 'xp') {
     const [rows] = await pool.execute(
       `SELECT p.display_name, p.reforger_player_id, SUM(px.xp) AS value
@@ -186,6 +236,24 @@ async function buildLeaderboard(type, filters = {}) {
     const [rows] = await pool.execute(
       `SELECT p.display_name, p.reforger_player_id,
               SUM(ss.resupplies + ss.supply_deliveries + ss.repairs + ss.builds + ss.transports + ss.teamwork_actions) AS value
+       FROM support_stats ss
+       JOIN players p ON p.id = ss.player_id
+       JOIN servers s ON s.id = ss.server_id
+       JOIN server_categories c ON c.id = s.category_id
+       WHERE (:server IS NULL OR s.server_id = :server)
+         AND (:category IS NULL OR c.slug = :category)
+         AND (:seasonId IS NULL OR ss.season_id = :seasonId)
+       GROUP BY p.id, p.display_name, p.reforger_player_id
+       ORDER BY value DESC
+       LIMIT ${limit}`,
+      queryFilters
+    );
+    return { type, filters, rows, cached: false };
+  }
+
+  if (type === 'support_amount') {
+    const [rows] = await pool.execute(
+      `SELECT p.display_name, p.reforger_player_id, SUM(ss.support_amount) AS value
        FROM support_stats ss
        JOIN players p ON p.id = ss.player_id
        JOIN servers s ON s.id = ss.server_id
@@ -312,6 +380,8 @@ async function getTopVehicles(filters = {}) {
 }
 
 module.exports = {
+  DEFAULT_LEADERBOARD_TYPES,
+  SUPPORTED_LEADERBOARD_TYPES,
   getLeaderboard,
   refreshLeaderboard,
   refreshDefaultLeaderboards,
