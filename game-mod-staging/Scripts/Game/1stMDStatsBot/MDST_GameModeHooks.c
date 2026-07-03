@@ -199,6 +199,34 @@ modded class SCR_BaseGameMode
 			stats.SendHeal(playerId, timeAsMedicSeconds);
 	}
 
+	void MDST_RecordMedicalEvent(int playerId, string eventType, int timeAsMedicSeconds = 0, float amount = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendMedicalEvent(playerId, eventType, timeAsMedicSeconds, "", "", "", amount);
+	}
+
+	void MDST_RecordReviveWithTarget(int playerId, int targetPlayerId, int timeAsMedicSeconds = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendReviveWithTarget(playerId, targetPlayerId, timeAsMedicSeconds);
+	}
+
+	void MDST_RecordHealWithTarget(int playerId, int targetPlayerId, int timeAsMedicSeconds = 0, float amount = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendHealWithTarget(playerId, targetPlayerId, timeAsMedicSeconds, amount);
+	}
+
+	void MDST_RecordMedicalEventWithTarget(int playerId, string eventType, int targetPlayerId, int timeAsMedicSeconds = 0, float amount = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendMedicalEventWithTarget(playerId, eventType, targetPlayerId, timeAsMedicSeconds, amount);
+	}
+
 	void MDST_RecordVehicleKill(int playerId, string vehicleId = "", string vehicleName = "")
 	{
 		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
@@ -246,6 +274,13 @@ modded class SCR_BaseGameMode
 		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
 		if (stats)
 			stats.SendSupportEvent(playerId, eventType, targetId, targetName, amount);
+	}
+
+	void MDST_RecordSupportEventWithTarget(int playerId, string eventType, int targetPlayerId, float amount = 0)
+	{
+		MDST_StatsGameModeComponent stats = MDST_GetStatsComponent();
+		if (stats)
+			stats.SendSupportEventWithTarget(playerId, eventType, targetPlayerId, amount);
 	}
 
 	void MDST_RecordResupply(int playerId, string targetId = "", string targetName = "")

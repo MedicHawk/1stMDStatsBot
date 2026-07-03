@@ -93,6 +93,45 @@ For exact shot and hit counts, call:
 - `MDST_RecordWeaponHits(playerId, weaponId, weaponName, hits)`
 - `MDST_RecordWeaponAccuracySample(playerId, weaponId, weaponName, shotsFired, hits)`
 
+## Medical And Support Tracking
+
+Basic medical helpers still work:
+
+- `MDST_RecordRevive(playerId, timeAsMedicSeconds)`
+- `MDST_RecordBandage(playerId, timeAsMedicSeconds)`
+- `MDST_RecordTourniquet(playerId, timeAsMedicSeconds)`
+- `MDST_RecordHeal(playerId, timeAsMedicSeconds)`
+
+When the target player is known, prefer:
+
+- `MDST_RecordReviveWithTarget(playerId, targetPlayerId, timeAsMedicSeconds)`
+- `MDST_RecordHealWithTarget(playerId, targetPlayerId, timeAsMedicSeconds, amount)`
+- `MDST_RecordMedicalEventWithTarget(playerId, eventType, targetPlayerId, timeAsMedicSeconds, amount)`
+
+Support events can include targets and amounts with `MDST_RecordSupportEvent(playerId, eventType, targetId, targetName, amount)` or `MDST_RecordSupportEventWithTarget(playerId, eventType, targetPlayerId, amount)`. The backend records both aggregate totals and raw `medical_events` / `support_events` rows for auditing and future feeds.
+
+### ACE Anvil Notes
+
+On ACE Anvil servers, prefer ACE-aware hooks that call the target-aware helpers above. ACE Medical Core uses addon GUID `60C4C12DAE90727B`; ACE Carrying uses `5DBD560C5148E1DA`; ACE Captives uses `646D52AF8BB3FF15`.
+
+Useful ACE integration points observed in ACE-Anvil:
+
+- `ACE_Medical_EpinephrineUserAction` extends the vanilla morphine action path, so epinephrine/revive-style tracking should hook the shared consumable completion path or a dedicated ACE adapter, then call `MDST_RecordMedicalEventWithTarget`.
+- `ACE_Medical_ConsumableMorphine` and `ACE_Medical_ConsumableEpinephrine` expose consumable effect types, which can map to `heal`/`revive` style medical events with `target_type: "player"`.
+- `ACE_Carrying_CarryUserAction` and `ACE_Carrying_DragUserAction` are good support signals. They can map to `teamwork` or `squad_support` with the casualty as the target.
+- `ACE_Captives_EscortCaptiveUserAction` can map to `teamwork` or a future dedicated support event if captive handling should be scored separately.
+
+Do not hard-reference ACE classes from the base stats addon unless the scenario/addon declares the ACE dependencies. If ACE is guaranteed on the server, an optional ACE adapter addon can safely mod those ACE user action classes and forward events into the `MDST_Record*WithTarget` helpers.
+
+The staged `MDST_ACEIntegration.c` adapter currently forwards:
+
+- ACE epinephrine use as target-aware `revive`
+- ACE carry casualty as `squad_support`
+- ACE drag casualty as `teamwork`
+- ACE escort captive as `teamwork`
+
+Bandage, tourniquet, and morphine should be wired next by confirming the active vanilla/ACE user action classes in Workbench, then forwarding those completion points to `MDST_RecordMedicalEventWithTarget`.
+
 ## Status And Mods
 
 Use `/api/status/heartbeat` for player counts, map/scenario, and uptime. The game-side mod publishes `/api/status/mods` from `$profile:MDST_StatsBot_Mods.json` on server start.

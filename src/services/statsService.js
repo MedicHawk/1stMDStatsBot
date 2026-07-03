@@ -62,6 +62,16 @@ function parsePositiveInt(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseNonNegativeNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function parseNonNegativeInt(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 async function ensurePlayer(connection, payload) {
   await connection.execute(
     `INSERT INTO players (reforger_player_id, display_name, first_seen, last_seen)
@@ -115,6 +125,7 @@ async function ensureSupportSchema() {
   }
 
   await ensureColumn('medical_stats', 'heals', 'heals INT UNSIGNED NOT NULL DEFAULT 0 AFTER tourniquets_used');
+  await ensureColumn('medical_stats', 'treatment_amount', 'treatment_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER heals');
   await ensureColumn('vehicle_stats', 'repairs', 'repairs INT UNSIGNED NOT NULL DEFAULT 0 AFTER crashes');
   await ensureColumn('player_sessions', 'rank_name', 'rank_name VARCHAR(80) NULL AFTER faction');
 
@@ -136,6 +147,51 @@ async function ensureSupportSchema() {
        CONSTRAINT fk_support_server FOREIGN KEY (server_id) REFERENCES servers(id),
        CONSTRAINT fk_support_player FOREIGN KEY (player_id) REFERENCES players(id),
        CONSTRAINT fk_support_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+     )`
+  );
+
+  await ensureColumn('support_stats', 'support_amount', 'support_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER teamwork_actions');
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS medical_events (
+       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       server_id BIGINT UNSIGNED NOT NULL,
+       player_id BIGINT UNSIGNED NOT NULL,
+       season_id BIGINT UNSIGNED NULL,
+       event_type VARCHAR(32) NOT NULL,
+       player_name VARCHAR(120) NULL,
+       target_reforger_id VARCHAR(128) NULL,
+       target_name VARCHAR(120) NULL,
+       target_type VARCHAR(32) NULL,
+       amount DECIMAL(12,2) NULL,
+       time_as_medic_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       INDEX idx_medical_events_player (player_id, created_at),
+       INDEX idx_medical_events_server_created (server_id, created_at),
+       CONSTRAINT fk_medical_events_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+       CONSTRAINT fk_medical_events_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+       CONSTRAINT fk_medical_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+     )`
+  );
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS support_events (
+       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+       server_id BIGINT UNSIGNED NOT NULL,
+       player_id BIGINT UNSIGNED NOT NULL,
+       season_id BIGINT UNSIGNED NULL,
+       event_type VARCHAR(64) NOT NULL,
+       player_name VARCHAR(120) NULL,
+       target_id VARCHAR(128) NULL,
+       target_name VARCHAR(120) NULL,
+       target_type VARCHAR(32) NULL,
+       amount DECIMAL(12,2) NULL,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       INDEX idx_support_events_player (player_id, created_at),
+       INDEX idx_support_events_server_created (server_id, created_at),
+       CONSTRAINT fk_support_events_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+       CONSTRAINT fk_support_events_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+       CONSTRAINT fk_support_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
      )`
   );
 
@@ -208,7 +264,12 @@ async function awardXp(connection, server, player, seasonId, sourceType, eventTy
         weapon_name: payload.weapon_name || null,
         vehicle_id: payload.vehicle_id || null,
         vehicle_name: payload.vehicle_name || null,
-        distance_meters: payload.distance_meters || null
+        distance_meters: payload.distance_meters || null,
+        target_id: payload.target_id || payload.target_reforger_id || null,
+        target_name: payload.target_name || null,
+        target_type: payload.target_type || null,
+        amount: payload.amount || null,
+        time_as_medic_seconds: payload.time_as_medic_seconds || null
       })
     }
   );
@@ -314,17 +375,42 @@ async function recordMedicalEvent(server, season, payload) {
     const fields = { revive: 'revives', bandage: 'bandages_used', tourniquet: 'tourniquets_used', heal: 'heals' };
     const column = fields[payload.event_type];
     if (!column) return;
+    const amount = parseNonNegativeNumber(payload.amount);
+    const medicSeconds = parseNonNegativeInt(payload.time_as_medic_seconds);
     await connection.execute(
-      `INSERT INTO medical_stats (server_id, player_id, season_id, ${column}, time_as_medic_seconds)
-       VALUES (:serverId, :playerId, :seasonId, 1, :medicSeconds)
-       ON DUPLICATE KEY UPDATE ${column} = ${column} + 1, time_as_medic_seconds = time_as_medic_seconds + VALUES(time_as_medic_seconds)`,
+      `INSERT INTO medical_stats (server_id, player_id, season_id, ${column}, treatment_amount, time_as_medic_seconds)
+       VALUES (:serverId, :playerId, :seasonId, 1, :amount, :medicSeconds)
+       ON DUPLICATE KEY UPDATE
+         ${column} = ${column} + 1,
+         treatment_amount = treatment_amount + VALUES(treatment_amount),
+         time_as_medic_seconds = time_as_medic_seconds + VALUES(time_as_medic_seconds)`,
       {
         serverId: server.id,
         playerId: player.id,
         seasonId,
-        medicSeconds: payload.time_as_medic_seconds || 0
+        amount,
+        medicSeconds
       }
     );
+
+    await connection.execute(
+      `INSERT INTO medical_events
+        (server_id, player_id, season_id, event_type, player_name, target_reforger_id, target_name, target_type, amount, time_as_medic_seconds)
+       VALUES (:serverId, :playerId, :seasonId, :eventType, :playerName, :targetReforgerId, :targetName, :targetType, :amount, :medicSeconds)`,
+      {
+        serverId: server.id,
+        playerId: player.id,
+        seasonId,
+        eventType: payload.event_type,
+        playerName: payload.player_name || null,
+        targetReforgerId: payload.target_reforger_id || payload.target_id || null,
+        targetName: payload.target_name || null,
+        targetType: payload.target_type || null,
+        amount,
+        medicSeconds
+      }
+    );
+
     await awardXp(connection, server, player, seasonId, 'medical', payload.event_type, payload);
   });
 }
@@ -435,12 +521,32 @@ async function recordSupportEvent(server, season, payload) {
     };
     const column = fields[payload.event_type];
     if (!column) return;
+    const amount = parseNonNegativeNumber(payload.amount);
 
     await connection.execute(
-      `INSERT INTO support_stats (server_id, player_id, season_id, ${column})
-       VALUES (:serverId, :playerId, :seasonId, 1)
-       ON DUPLICATE KEY UPDATE ${column} = ${column} + 1`,
-      { serverId: server.id, playerId: player.id, seasonId }
+      `INSERT INTO support_stats (server_id, player_id, season_id, ${column}, support_amount)
+       VALUES (:serverId, :playerId, :seasonId, 1, :amount)
+       ON DUPLICATE KEY UPDATE
+         ${column} = ${column} + 1,
+         support_amount = support_amount + VALUES(support_amount)`,
+      { serverId: server.id, playerId: player.id, seasonId, amount }
+    );
+
+    await connection.execute(
+      `INSERT INTO support_events
+        (server_id, player_id, season_id, event_type, player_name, target_id, target_name, target_type, amount)
+       VALUES (:serverId, :playerId, :seasonId, :eventType, :playerName, :targetId, :targetName, :targetType, :amount)`,
+      {
+        serverId: server.id,
+        playerId: player.id,
+        seasonId,
+        eventType: payload.event_type,
+        playerName: payload.player_name || null,
+        targetId: payload.target_id || payload.target_reforger_id || null,
+        targetName: payload.target_name || null,
+        targetType: payload.target_type || null,
+        amount
+      }
     );
 
     await awardXp(connection, server, player, seasonId, 'support', payload.event_type, payload);
@@ -644,6 +750,68 @@ async function closeStaleOpenSessions({ serverId = null, olderThanMinutes = 60 }
   return result.affectedRows || 0;
 }
 
+async function listRecentSupportEvents({ serverId = null, type = 'all', limit = 15 } = {}) {
+  await ensureSupportSchema();
+  const rowLimit = Math.min(parsePositiveInt(limit, 15), 25);
+  const includeMedical = type === 'all' || type === 'medical';
+  const includeSupport = type === 'all' || type === 'support';
+  const queries = [];
+
+  if (includeMedical) {
+    queries.push(
+      `SELECT 'medical' AS family,
+              me.event_type,
+              s.server_id,
+              me.player_name,
+              p.reforger_player_id,
+              me.target_name,
+              me.target_reforger_id AS target_id,
+              me.target_type,
+              me.amount,
+              me.time_as_medic_seconds,
+              me.created_at
+       FROM medical_events me
+       JOIN servers s ON s.id = me.server_id
+       JOIN players p ON p.id = me.player_id
+       WHERE (:serverId IS NULL OR s.server_id = :serverId)`
+    );
+  }
+
+  if (includeSupport) {
+    queries.push(
+      `SELECT 'support' AS family,
+              se.event_type,
+              s.server_id,
+              se.player_name,
+              p.reforger_player_id,
+              se.target_name,
+              se.target_id,
+              se.target_type,
+              se.amount,
+              NULL AS time_as_medic_seconds,
+              se.created_at
+       FROM support_events se
+       JOIN servers s ON s.id = se.server_id
+       JOIN players p ON p.id = se.player_id
+       WHERE (:serverId IS NULL OR s.server_id = :serverId)`
+    );
+  }
+
+  if (queries.length === 0) {
+    return [];
+  }
+
+  const [rows] = await pool.execute(
+    `SELECT *
+     FROM (${queries.join(' UNION ALL ')}) recent_events
+     ORDER BY created_at DESC
+     LIMIT ${rowLimit}`,
+    { serverId }
+  );
+
+  return rows;
+}
+
 async function endMatch(server, payload) {
   if (!payload.external_match_id) {
     await pool.execute(
@@ -738,6 +906,7 @@ module.exports = {
   closeOpenServerSessions,
   listOpenSessions,
   closeStaleOpenSessions,
+  listRecentSupportEvents,
   adjustPlayerStat,
   ensureSupportSchema
 };

@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS medical_stats (
   bandages_used INT UNSIGNED NOT NULL DEFAULT 0,
   tourniquets_used INT UNSIGNED NOT NULL DEFAULT 0,
   heals INT UNSIGNED NOT NULL DEFAULT 0,
+  treatment_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   time_as_medic_seconds BIGINT UNSIGNED NOT NULL DEFAULT 0,
   season_scope_id BIGINT UNSIGNED AS (COALESCE(season_id, 0)) STORED,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -258,6 +259,26 @@ CREATE TABLE IF NOT EXISTS medical_stats (
   CONSTRAINT fk_medical_server FOREIGN KEY (server_id) REFERENCES servers(id),
   CONSTRAINT fk_medical_player FOREIGN KEY (player_id) REFERENCES players(id),
   CONSTRAINT fk_medical_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+);
+
+CREATE TABLE IF NOT EXISTS medical_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  server_id BIGINT UNSIGNED NOT NULL,
+  player_id BIGINT UNSIGNED NOT NULL,
+  season_id BIGINT UNSIGNED NULL,
+  event_type VARCHAR(32) NOT NULL,
+  player_name VARCHAR(120) NULL,
+  target_reforger_id VARCHAR(128) NULL,
+  target_name VARCHAR(120) NULL,
+  target_type VARCHAR(32) NULL,
+  amount DECIMAL(12,2) NULL,
+  time_as_medic_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_medical_events_player (player_id, created_at),
+  INDEX idx_medical_events_server_created (server_id, created_at),
+  CONSTRAINT fk_medical_events_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_medical_events_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+  CONSTRAINT fk_medical_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
 );
 
 CREATE TABLE IF NOT EXISTS support_stats (
@@ -271,12 +292,32 @@ CREATE TABLE IF NOT EXISTS support_stats (
   builds INT UNSIGNED NOT NULL DEFAULT 0,
   transports INT UNSIGNED NOT NULL DEFAULT 0,
   teamwork_actions INT UNSIGNED NOT NULL DEFAULT 0,
+  support_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   season_scope_id BIGINT UNSIGNED AS (COALESCE(season_id, 0)) STORED,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_support_scope (server_id, player_id, season_scope_id),
   CONSTRAINT fk_support_server FOREIGN KEY (server_id) REFERENCES servers(id),
   CONSTRAINT fk_support_player FOREIGN KEY (player_id) REFERENCES players(id),
   CONSTRAINT fk_support_season FOREIGN KEY (season_id) REFERENCES seasons(id)
+);
+
+CREATE TABLE IF NOT EXISTS support_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  server_id BIGINT UNSIGNED NOT NULL,
+  player_id BIGINT UNSIGNED NOT NULL,
+  season_id BIGINT UNSIGNED NULL,
+  event_type VARCHAR(64) NOT NULL,
+  player_name VARCHAR(120) NULL,
+  target_id VARCHAR(128) NULL,
+  target_name VARCHAR(120) NULL,
+  target_type VARCHAR(32) NULL,
+  amount DECIMAL(12,2) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_support_events_player (player_id, created_at),
+  INDEX idx_support_events_server_created (server_id, created_at),
+  CONSTRAINT fk_support_events_server FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_support_events_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+  CONSTRAINT fk_support_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
 );
 
 CREATE TABLE IF NOT EXISTS player_xp (

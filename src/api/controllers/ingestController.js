@@ -138,8 +138,24 @@ async function smokeTest(req, res, next) {
       shots_fired: 3,
       hits: 2
     });
-    await statsService.recordMedicalEvent(req.server, season, { ...basePayload, event_type: 'bandage', time_as_medic_seconds: 10 });
-    await statsService.recordMedicalEvent(req.server, season, { ...basePayload, event_type: 'heal', time_as_medic_seconds: 5 });
+    await statsService.recordMedicalEvent(req.server, season, {
+      ...basePayload,
+      event_type: 'bandage',
+      time_as_medic_seconds: 10,
+      target_reforger_id: `${basePayload.player_reforger_id}-patient`,
+      target_name: 'Smoke Test Patient',
+      target_type: 'player',
+      amount: 15
+    });
+    await statsService.recordMedicalEvent(req.server, season, {
+      ...basePayload,
+      event_type: 'heal',
+      time_as_medic_seconds: 5,
+      target_reforger_id: `${basePayload.player_reforger_id}-patient`,
+      target_name: 'Smoke Test Patient',
+      target_type: 'player',
+      amount: 25
+    });
     await statsService.recordVehicleEvent(req.server, season, {
       ...basePayload,
       event_type: 'travel',
@@ -148,7 +164,14 @@ async function smokeTest(req, res, next) {
       distance_driven_meters: 100,
       time_in_vehicle_seconds: 30
     });
-    await statsService.recordSupportEvent(req.server, season, { ...basePayload, event_type: 'resupply' });
+    await statsService.recordSupportEvent(req.server, season, {
+      ...basePayload,
+      event_type: 'resupply',
+      target_id: `${basePayload.player_reforger_id}-rifleman`,
+      target_name: 'Smoke Test Rifleman',
+      target_type: 'player',
+      amount: 120
+    });
     await statsService.recordObjectiveEvent(req.server, season, { ...basePayload, event_type: 'mission_participation' });
     await statsService.recordObjectiveEvent(req.server, season, { ...basePayload, event_type: 'objective_completed' });
     await statsService.endSession(req.server, basePayload);

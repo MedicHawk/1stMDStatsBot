@@ -10,6 +10,11 @@ function formatDistance(meters) {
   return `${Math.round(value)} m`;
 }
 
+function formatAmount(value) {
+  const amount = Number(value || 0);
+  return amount.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
 function profileEmbed(profile) {
   if (!profile) {
     return new EmbedBuilder()
@@ -39,8 +44,12 @@ function profileEmbed(profile) {
       { name: 'Deaths', value: String(deaths), inline: true },
       { name: 'Revives', value: String(profile.revives || 0), inline: true },
       { name: 'Heals', value: String(profile.heals || 0), inline: true },
+      { name: 'Bandages', value: String(profile.bandages_used || 0), inline: true },
+      { name: 'Tourniquets', value: String(profile.tourniquets_used || 0), inline: true },
+      { name: 'Treatment', value: formatAmount(profile.treatment_amount), inline: true },
       { name: 'Vehicle Repairs', value: String(profile.vehicle_repairs || 0), inline: true },
       { name: 'Support Actions', value: String(supportTotal), inline: true },
+      { name: 'Support Amount', value: formatAmount(profile.support_amount), inline: true },
       { name: 'Teamwork', value: String(profile.teamwork_actions || 0), inline: true },
       { name: 'Total Distance', value: formatDistance(totalDistance), inline: true },
       { name: 'Foot Distance', value: formatDistance(profile.distance_foot_meters), inline: true },

@@ -418,7 +418,7 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void SendMedicalEvent(int playerId, string eventType, int timeAsMedicSeconds = 0)
+	void SendMedicalEvent(int playerId, string eventType, int timeAsMedicSeconds = 0, string targetId = "", string targetName = "", string targetType = "", float amount = 0)
 	{
 		if (!IsStatsReady())
 			return;
@@ -431,6 +431,10 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 			MDST_Json.PairString("player_reforger_id", identity.m_sStableId) + "," +
 			MDST_Json.PairString("player_name", identity.m_sDisplayName) + "," +
 			MDST_Json.PairString("event_type", eventType) + "," +
+			MDST_Json.PairString("target_reforger_id", targetId) + "," +
+			MDST_Json.PairString("target_name", targetName) + "," +
+			MDST_Json.PairString("target_type", targetType) + "," +
+			MDST_Json.PairFloat("amount", amount) + "," +
 			MDST_Json.PairInt("time_as_medic_seconds", timeAsMedicSeconds) +
 		"}";
 
@@ -459,6 +463,37 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	void SendHeal(int playerId, int timeAsMedicSeconds = 0)
 	{
 		SendMedicalEvent(playerId, "heal", timeAsMedicSeconds);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendMedicalEventWithTarget(int playerId, string eventType, int targetPlayerId, int timeAsMedicSeconds = 0, float amount = 0)
+	{
+		string targetStableId = "";
+		string targetName = "";
+
+		if (targetPlayerId > 0)
+		{
+			MDST_PlayerIdentity targetIdentity = m_IdentityService.Resolve(targetPlayerId);
+			if (targetIdentity && targetIdentity.IsValid())
+			{
+				targetStableId = targetIdentity.m_sStableId;
+				targetName = targetIdentity.m_sDisplayName;
+			}
+		}
+
+		SendMedicalEvent(playerId, eventType, timeAsMedicSeconds, targetStableId, targetName, "player", amount);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendReviveWithTarget(int playerId, int targetPlayerId, int timeAsMedicSeconds = 0)
+	{
+		SendMedicalEventWithTarget(playerId, "revive", targetPlayerId, timeAsMedicSeconds);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendHealWithTarget(int playerId, int targetPlayerId, int timeAsMedicSeconds = 0, float amount = 0)
+	{
+		SendMedicalEventWithTarget(playerId, "heal", targetPlayerId, timeAsMedicSeconds, amount);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -522,7 +557,7 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void SendSupportEvent(int playerId, string eventType, string targetId = "", string targetName = "", float amount = 0)
+	void SendSupportEvent(int playerId, string eventType, string targetId = "", string targetName = "", float amount = 0, string targetType = "")
 	{
 		if (!IsStatsReady())
 			return;
@@ -537,6 +572,7 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 		json += MDST_Json.PairString("event_type", eventType) + ",";
 		json += MDST_Json.PairString("target_id", targetId) + ",";
 		json += MDST_Json.PairString("target_name", targetName) + ",";
+		json += MDST_Json.PairString("target_type", targetType) + ",";
 		json += MDST_Json.PairFloat("amount", amount);
 		json += "}";
 
@@ -559,6 +595,25 @@ class MDST_StatsGameModeComponent : SCR_BaseGameModeComponent
 	void SendTeamworkAction(int playerId, string targetId = "", string targetName = "")
 	{
 		SendSupportEvent(playerId, "teamwork", targetId, targetName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SendSupportEventWithTarget(int playerId, string eventType, int targetPlayerId, float amount = 0)
+	{
+		string targetStableId = "";
+		string targetName = "";
+
+		if (targetPlayerId > 0)
+		{
+			MDST_PlayerIdentity targetIdentity = m_IdentityService.Resolve(targetPlayerId);
+			if (targetIdentity && targetIdentity.IsValid())
+			{
+				targetStableId = targetIdentity.m_sStableId;
+				targetName = targetIdentity.m_sDisplayName;
+			}
+		}
+
+		SendSupportEvent(playerId, eventType, targetStableId, targetName, amount, "player");
 	}
 
 	//------------------------------------------------------------------------------------------------

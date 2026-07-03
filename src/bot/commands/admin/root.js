@@ -56,6 +56,20 @@ module.exports = {
       .addStringOption((option) => option.setName('server_id').setDescription('Optional server ID filter.').setRequired(false))
       .addIntegerOption((option) => option.setName('limit').setDescription('Max rows, default 15.').setRequired(false).setMinValue(1).setMaxValue(25)))
     .addSubcommand((sub) => sub
+      .setName('recent-events')
+      .setDescription('List recent medical and support event rows.')
+      .addStringOption((option) => option
+        .setName('type')
+        .setDescription('Event family.')
+        .setRequired(false)
+        .addChoices(
+          { name: 'All', value: 'all' },
+          { name: 'Medical', value: 'medical' },
+          { name: 'Support', value: 'support' }
+        ))
+      .addStringOption((option) => option.setName('server_id').setDescription('Optional server ID filter.').setRequired(false))
+      .addIntegerOption((option) => option.setName('limit').setDescription('Max rows, default 15.').setRequired(false).setMinValue(1).setMaxValue(25)))
+    .addSubcommand((sub) => sub
       .setName('close-stale-sessions')
       .setDescription('Close stale open sessions with zero duration.')
       .addStringOption((option) => option.setName('confirm').setDescription('Type CLOSE to confirm.').setRequired(true))
@@ -166,6 +180,27 @@ module.exports = {
           }).join('\n')
         : 'No open sessions found.';
       await interaction.editReply({ content: `Open sessions:\n\`\`\`\n${text.slice(0, 1900)}\n\`\`\`` });
+      return;
+    }
+
+    if (subcommand === 'recent-events') {
+      await interaction.deferReply({ ephemeral: true });
+      const rows = await statsService.listRecentSupportEvents({
+        serverId: interaction.options.getString('server_id'),
+        type: interaction.options.getString('type') || 'all',
+        limit: interaction.options.getInteger('limit') || 15
+      });
+      const text = rows.length
+        ? rows.map((row) => {
+            const actor = row.player_name || row.reforger_player_id;
+            const target = row.target_name || row.target_id || '-';
+            const amount = Number(row.amount || 0);
+            const amountText = amount > 0 ? ` amt=${amount.toLocaleString(undefined, { maximumFractionDigits: 1 })}` : '';
+            const medicText = row.time_as_medic_seconds ? ` medic=${formatDuration(row.time_as_medic_seconds)}` : '';
+            return `${row.created_at} | ${row.server_id} | ${row.family}:${row.event_type} | ${actor} -> ${target}${amountText}${medicText}`;
+          }).join('\n')
+        : 'No recent medical/support events found.';
+      await interaction.editReply({ content: `Recent events:\n\`\`\`\n${text.slice(0, 1900)}\n\`\`\`` });
       return;
     }
 

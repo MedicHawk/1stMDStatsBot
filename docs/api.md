@@ -135,11 +135,17 @@ Supported combat `event_type` values: `kill`, `ai_kill`, `death`, `teamkill`, `a
 {
   "player_reforger_id": "stable-player-id",
   "event_type": "revive",
-  "time_as_medic_seconds": 30
+  "time_as_medic_seconds": 30,
+  "target_reforger_id": "optional-patient-id",
+  "target_name": "Optional Patient Name",
+  "target_type": "player",
+  "amount": 25
 }
 ```
 
-Supported medical values: `revive`, `bandage`, `tourniquet`.
+Supported medical values: `revive`, `bandage`, `tourniquet`, `heal`.
+
+Medical events update aggregate medical totals and write a row to `medical_events` for event-level auditing. Target and amount fields are optional.
 
 `POST /api/ingest/vehicle`
 
@@ -155,6 +161,23 @@ Supported medical values: `revive`, `bandage`, `tourniquet`.
 ```
 
 Supported vehicle values: `kill`, `death`, `assist`, `destroyed`, `crash`, `travel`.
+
+`POST /api/ingest/support`
+
+```json
+{
+  "player_reforger_id": "stable-player-id",
+  "event_type": "resupply",
+  "target_id": "optional-target-id",
+  "target_name": "Optional Target Name",
+  "target_type": "player",
+  "amount": 120
+}
+```
+
+Supported support values: `resupply`, `ammo_resupply`, `supply_delivery`, `repair`, `vehicle_repair`, `build`, `fortification`, `transport`, `teamwork`, `squad_support`, `spot`, `deploy_spawn`.
+
+Support events update aggregate support totals and write a row to `support_events` for event-level auditing. Target and amount fields are optional.
 
 `POST /api/ingest/movement`
 

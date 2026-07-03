@@ -96,6 +96,8 @@ The Reforger API surface changes across builds, so identity and event hooks are 
 - Players can run `!stats` or `/stats` in chat to show their current stats popup; combat events no longer show it automatically.
 - Other addons can still call `MDST_StatsGameModeComponent.GetInstance().SendLinkCode(playerId, code)` directly.
 - From other server-side scripts, call `SCR_BaseGameMode.MDST_RecordAIKill`, `MDST_RecordAIKilledByPlayer`, `MDST_RecordAIKilledByEntity`, `MDST_RecordAIKilledByInstigator`, `MDST_RecordRevive`, `MDST_RecordObjectiveCompleted`, or the component wrapper methods directly.
+- Prefer target-aware helpers such as `MDST_RecordReviveWithTarget`, `MDST_RecordHealWithTarget`, `MDST_RecordMedicalEventWithTarget`, and `MDST_RecordSupportEventWithTarget` when the assisted player is known.
+- `MDST_ACEIntegration.c` forwards ACE epinephrine, carry, drag, and escort-captive actions into those helpers. This file requires ACE Medical Core, ACE Carrying, and ACE Captives to be loaded before the stats addon.
 - For your endless objective system, call `MDST_RecordObjectiveCompletedNear(objectivePosition, radiusMeters)` when an objective completes. Nearby players receive both mission participation and objective completion credit.
 - If exact AI-kill attribution is unavailable, call `MDST_RecordAIKillNear(position, radiusMeters)` for one nearest-player AI kill, or `MDST_RecordAIKillsNear(position, radiusMeters, count)` to distribute cleanup-based AI kill credit among nearby players.
 

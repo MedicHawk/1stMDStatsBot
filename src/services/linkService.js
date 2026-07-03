@@ -119,13 +119,17 @@ async function getProfileByDiscordId(discordUserId) {
             COALESCE(ps.teamkills, 0) AS teamkills,
             COALESCE(ps.assists, 0) AS assists,
             COALESCE(ms.revives, 0) AS revives,
+            COALESCE(ms.bandages_used, 0) AS bandages_used,
+            COALESCE(ms.tourniquets_used, 0) AS tourniquets_used,
             COALESCE(ms.heals, 0) AS heals,
+            COALESCE(ms.treatment_amount, 0) AS treatment_amount,
             COALESCE(ss.resupplies, 0) AS resupplies,
             COALESCE(ss.supply_deliveries, 0) AS supply_deliveries,
             COALESCE(ss.repairs, 0) AS support_repairs,
             COALESCE(ss.builds, 0) AS builds,
             COALESCE(ss.transports, 0) AS transports,
             COALESCE(ss.teamwork_actions, 0) AS teamwork_actions,
+            COALESCE(ss.support_amount, 0) AS support_amount,
             COALESCE(vs.repairs, 0) AS vehicle_repairs,
             COALESCE(px.xp, 0) AS xp,
             COALESCE(mv.distance_foot_meters, 0) AS distance_foot_meters,
@@ -144,7 +148,12 @@ async function getProfileByDiscordId(discordUserId) {
        GROUP BY player_id
      ) ps ON ps.player_id = p.id
      LEFT JOIN (
-       SELECT player_id, SUM(revives) AS revives, SUM(heals) AS heals
+       SELECT player_id,
+              SUM(revives) AS revives,
+              SUM(bandages_used) AS bandages_used,
+              SUM(tourniquets_used) AS tourniquets_used,
+              SUM(heals) AS heals,
+              SUM(treatment_amount) AS treatment_amount
        FROM medical_stats
        GROUP BY player_id
      ) ms ON ms.player_id = p.id
@@ -155,7 +164,8 @@ async function getProfileByDiscordId(discordUserId) {
               SUM(repairs) AS repairs,
               SUM(builds) AS builds,
               SUM(transports) AS transports,
-              SUM(teamwork_actions) AS teamwork_actions
+              SUM(teamwork_actions) AS teamwork_actions,
+              SUM(support_amount) AS support_amount
        FROM support_stats
        GROUP BY player_id
      ) ss ON ss.player_id = p.id
