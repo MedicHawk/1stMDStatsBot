@@ -38,7 +38,9 @@ async function ensureServerFeatureColumns() {
 
   const requiredColumns = [
     ['kill_feed_channel_id', 'kill_feed_channel_id VARCHAR(32) NULL'],
-    ['kill_feed_enabled', 'kill_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE']
+    ['kill_feed_enabled', 'kill_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE'],
+    ['support_feed_channel_id', 'support_feed_channel_id VARCHAR(32) NULL'],
+    ['support_feed_enabled', 'support_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE']
   ];
 
   for (const [columnName, definition] of requiredColumns) {
@@ -64,7 +66,7 @@ async function listServers({ enabledOnly = false } = {}) {
   const [rows] = await pool.execute(
     `SELECT s.server_id, s.name, c.slug AS category, s.battlemetrics_id, s.enabled,
             s.status_channel_id, s.leaderboard_channel_id, s.kill_feed_channel_id,
-            s.kill_feed_enabled, s.current_status,
+            s.kill_feed_enabled, s.support_feed_channel_id, s.support_feed_enabled, s.current_status,
             s.current_player_count, s.max_player_slots, s.current_map,
             s.uptime_seconds, s.battlemetrics_rank, s.last_heartbeat_at
      FROM servers s
@@ -270,6 +272,32 @@ async function setKillFeedEnabled(serverId, enabled) {
   }
 }
 
+async function setSupportFeedChannel(serverId, channelId) {
+  await ensureServerFeatureColumns();
+  const [result] = await pool.execute(
+    'UPDATE servers SET support_feed_channel_id = :channelId WHERE server_id = :serverId',
+    { serverId, channelId }
+  );
+  if (result.affectedRows === 0) {
+    const error = new Error('Server not found');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
+async function setSupportFeedEnabled(serverId, enabled) {
+  await ensureServerFeatureColumns();
+  const [result] = await pool.execute(
+    'UPDATE servers SET support_feed_enabled = :enabled WHERE server_id = :serverId',
+    { serverId, enabled }
+  );
+  if (result.affectedRows === 0) {
+    const error = new Error('Server not found');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
 async function recordHeartbeat(server, payload) {
   await pool.execute(
     `UPDATE servers
@@ -390,6 +418,8 @@ module.exports = {
   setLeaderboardChannel,
   setKillFeedChannel,
   setKillFeedEnabled,
+  setSupportFeedChannel,
+  setSupportFeedEnabled,
   recordHeartbeat,
   updatePublicStatus,
   replaceMods,

@@ -18,5 +18,6 @@ module.exports = [
   require('./admin/statsAdjust'),
   require('./admin/statusChannel'),
   require('./admin/leaderboardChannel'),
-  require('./admin/killFeed')
+  require('./admin/killFeed'),
+  require('./admin/supportFeed')
 ];

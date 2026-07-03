@@ -33,6 +33,8 @@ Returns live leaderboard rows by default. Add `?cached=true` to read the refresh
 
 Returns recent medical/support event rows for feeds, overlays, and diagnostics. Optional query parameters: `server_id`, `type` (`all`, `medical`, or `support`), and `limit` up to 25.
 
+The Discord bot can also publish these rows through `/supportfeed set` and `/supportfeed enable`.
+
 ## Linking
 
 `POST /api/link/verify`

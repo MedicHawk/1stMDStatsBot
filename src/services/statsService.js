@@ -173,6 +173,7 @@ async function ensureSupportSchema() {
        CONSTRAINT fk_medical_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
      )`
   );
+  await ensureColumn('medical_events', 'posted_at', 'posted_at TIMESTAMP NULL AFTER created_at');
 
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS support_events (
@@ -194,6 +195,7 @@ async function ensureSupportSchema() {
        CONSTRAINT fk_support_events_season FOREIGN KEY (season_id) REFERENCES seasons(id)
      )`
   );
+  await ensureColumn('support_events', 'posted_at', 'posted_at TIMESTAMP NULL AFTER created_at');
 
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS player_xp (

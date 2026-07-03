@@ -64,6 +64,15 @@ When `DISCORD_STATUS_PRESENCE_ENABLED=true`, the bot rich presence also shows ag
 Leaderboard channels work the same way: `/leaderboardchannel set` maps a channel, then the bot maintains one refreshed leaderboard message for that server instead of posting a new message each interval.
 
 Set `DISCORD_LEADERBOARD_TYPES` to choose which boards auto-publish, such as `kills,aikills,hours,xp,support,treatment,support_amount`. The `/leaderboard` command also supports medical boards for revives, bandages, tourniquets, heals, and treatment amount.
+
+Medical/support feed channels:
+
+```text
+/supportfeed set server_id: hosted-main channel: #support-feed
+/supportfeed enable server_id: hosted-main
+```
+
+When `DISCORD_SUPPORT_FEED_ENABLED=true`, the bot posts new medical/support rows from the event tables and marks each row posted after Discord accepts it.
 7. Start the API with `npm run api`.
 8. Start the bot with `npm run bot`.
 
